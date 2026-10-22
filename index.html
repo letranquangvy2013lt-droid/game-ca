@@ -1,0 +1,23 @@
+
+let diem = 0;
+
+let caCuaBan = {
+    x: 200,
+    y: 200,
+    kichThuoc: 20,
+    tocDo: 3
+};
+
+function anCa(caBiAn) {
+    // Chỉ ăn cá nhỏ hơn
+    if (caCuaBan.kichThuoc > caBiAn.kichThuoc) {
+        diem += 10;
+
+        // Cá của bạn lớn dần
+        caCuaBan.kichThuoc += 2;
+
+        console.log("Bạn đã ăn một con cá!");
+        console.log("Điểm:", diem);
+        console.log("Kích thước cá:", caCuaBan.kichThuoc);
+    }
+}
