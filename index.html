@@ -1,23 +1,163 @@
 
-let diem = 0;
-
-let caCuaBan = {
-    x: 200,
-    y: 200,
-    kichThuoc: 20,
-    tocDo: 3
-};
-
-function anCa(caBiAn) {
-    // Chỉ ăn cá nhỏ hơn
-    if (caCuaBan.kichThuoc > caBiAn.kichThuoc) {
-        diem += 10;
-
-        // Cá của bạn lớn dần
-        caCuaBan.kichThuoc += 2;
-
-        console.log("Bạn đã ăn một con cá!");
-        console.log("Điểm:", diem);
-        console.log("Kích thước cá:", caCuaBan.kichThuoc);
-    }
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🐠 Cá Lớn Nuốt Cá Bé</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#053b70;color:white;font-family:Arial,sans-serif;text-align:center}
+h1{margin:14px 5px;font-size:clamp(23px,4vw,36px)}
+#info{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:10px}
+.badge{background:#ffffff22;padding:9px 15px;border-radius:20px;font-weight:bold}
+#game{display:block;width:min(96vw,960px);margin:auto;border:4px solid #8beaff;border-radius:14px;touch-action:none;background:#079acb}
+button{background:#ffcf4a;border:0;border-radius:12px;padding:12px 20px;font-weight:bold;font-size:16px;cursor:pointer}
+#panel{padding:12px}
+#message{min-height:24px}
+small{display:block;padding:12px;line-height:1.6}
+</style>
+</head>
+<body>
+<h1>🐠 Cá Lớn Nuốt Cá Bé 🌊</h1>
+<div id="info">
+ <div class="badge">⭐ Điểm: <span id="score">0</span></div>
+ <div class="badge">🐟 Kích thước: <span id="size">20</span></div>
+ <div class="badge">🏆 Kỷ lục: <span id="best">0</span></div>
+</div>
+<canvas id="game" width="960" height="540"></canvas>
+<div id="panel">
+ <div id="message">Hãy ăn cá nhỏ hơn và tránh cá lớn!</div>
+ <button id="start">▶ BẮT ĐẦU CHƠI</button>
+</div>
+<small>Máy tính: dùng WASD, phím mũi tên hoặc chuột để bơi.<br>
+Điện thoại: chạm và kéo trên mặt biển để điều khiển cá.</small>
+<script>
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+const W=canvas.width,H=canvas.height;
+const scoreEl=document.getElementById("score");
+const sizeEl=document.getElementById("size");
+const bestEl=document.getElementById("best");
+const message=document.getElementById("message");
+const startBtn=document.getElementById("start");
+const colors=["#ff776b","#ffd447","#c084fc","#4adebd","#fb923c","#f472b6","#93c5fd","#b9ed62"];
+let player,fish,bubbles,score=0,best=0,running=false,last=0;
+let keys={},target=null;
+try{best=Number(localStorage.getItem("fishBest")||0)}catch(e){}
+bestEl.textContent=best;
+function rand(a,b){return a+Math.random()*(b-a)}
+function makeFish(){
+ let r=rand(10,43),dir=Math.random()<.5?1:-1;
+ return {x:dir===1?-r:W+r,y:rand(35,H-45),r,
+ speed:rand(35,100)*dir,color:colors[Math.floor(Math.random()*colors.length)],
+ phase:rand(0,7)};
 }
+function reset(){
+ score=0;
+ player={x:W/2,y:H/2,r:20,speed:230,dir:1};
+ fish=Array.from({length:25},()=>({...makeFish(),x:rand(20,W-20)}));
+ bubbles=Array.from({length:40},()=>({x:rand(0,W),y:rand(0,H),r:rand(2,6),v:rand(10,35)}));
+ updateHUD();
+}
+function updateHUD(){
+ scoreEl.textContent=score;
+ sizeEl.textContent=Math.round(player.r);
+}
+function drawFish(x,y,r,color,dir){
+ ctx.save();ctx.translate(x,y);ctx.scale(dir,1);
+ ctx.fillStyle=color;
+ ctx.beginPath();ctx.moveTo(-r*.6,0);ctx.lineTo(-r*1.35,-r*.7);ctx.lineTo(-r*1.35,r*.7);ctx.closePath();ctx.fill();
+ ctx.beginPath();ctx.ellipse(0,0,r,r*.68,0,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle="#ffffff55";ctx.beginPath();ctx.ellipse(0,-r*.23,r*.5,r*.14,0,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle="white";ctx.beginPath();ctx.arc(r*.48,-r*.12,Math.max(2,r*.17),0,Math.PI*2);ctx.fill();
+ ctx.fillStyle="#12334a";ctx.beginPath();ctx.arc(r*.52,-r*.12,Math.max(1,r*.08),0,Math.PI*2);ctx.fill();
+ ctx.restore();
+}
+function background(dt){
+ let g=ctx.createLinearGradient(0,0,0,H);
+ g.addColorStop(0,"#40d7ee");g.addColorStop(.6,"#078cc2");g.addColorStop(1,"#064c86");
+ ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+ ctx.fillStyle="#ffffff0c";
+ for(let i=0;i<6;i++){ctx.beginPath();ctx.moveTo(i*190,0);ctx.lineTo(i*190+75,0);ctx.lineTo(i*190+210,H);ctx.lineTo(i*190+115,H);ctx.fill()}
+ bubbles.forEach(b=>{b.y-=b.v*dt;if(b.y<0){b.y=H;b.x=rand(0,W)}
+ ctx.strokeStyle="#c8f7ff99";ctx.lineWidth=2;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,7);ctx.stroke()});
+ ctx.fillStyle="#dfcf80";ctx.beginPath();ctx.moveTo(0,H-17);
+ for(let x=0;x<=W;x+=30)ctx.lineTo(x,H-17+Math.sin(x*.025)*5);
+ ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.fill();
+ for(let i=0;i<12;i++){let x=i*85+15;
+ ctx.strokeStyle=i%2?"#28b66d":"#138c62";ctx.lineWidth=7;ctx.lineCap="round";
+ ctx.beginPath();ctx.moveTo(x,H-12);ctx.quadraticCurveTo(x-15,H-45,x+Math.sin(Date.now()/700+i)*9,H-75-i%3*12);ctx.stroke()}
+}
+function finish(){
+ running=false;
+ message.textContent="Bạn đạt "+score+" điểm! Hãy thử lại nhé!";
+ startBtn.textContent="🔄 CHƠI LẠI";
+ if(score>best){best=score;bestEl.textContent=best;
+ try{localStorage.setItem("fishBest",best)}catch(e){}}
+}
+function loop(now){
+ if(!running)return;
+ let dt=Math.min((now-last)/1000,.035);last=now;
+ background(dt);
+ let dx=0,dy=0;
+ if(keys.ArrowLeft||keys.a||keys.A)dx--;
+ if(keys.ArrowRight||keys.d||keys.D)dx++;
+ if(keys.ArrowUp||keys.w||keys.W)dy--;
+ if(keys.ArrowDown||keys.s||keys.S)dy++;
+ if(target&&!dx&&!dy){
+  let vx=target.x-player.x,vy=target.y-player.y,d=Math.hypot(vx,vy);
+  if(d>5){dx=vx/d;dy=vy/d}
+ }
+ let l=Math.hypot(dx,dy)||1;
+ player.x=Math.max(player.r,Math.min(W-player.r,player.x+dx/l*player.speed*dt));
+ player.y=Math.max(player.r,Math.min(H-player.r-15,player.y+dy/l*player.speed*dt));
+ if(dx)player.dir=dx>0?1:-1;
+ for(let i=0;i<fish.length;i++){
+  let f=fish[i];f.x+=f.speed*dt;
+  f.y+=Math.sin(now/500+f.phase)*12*dt;
+  if(f.speed>0&&f.x>W+60)fish[i]=makeFish();
+  if(f.speed<0&&f.x<-60)fish[i]=makeFish();
+  f=fish[i];
+  let d=Math.hypot(player.x-f.x,player.y-f.y);
+  if(d<player.r+f.r*.65){
+   if(player.r>f.r*1.12){
+    score+=10;player.r=Math.min(65,player.r+1.5);
+    fish[i]=makeFish();updateHUD();
+    if(score>best){best=score;bestEl.textContent=best;
+     try{localStorage.setItem("fishBest",best)}catch(e){}}
+    continue;
+   }else if(f.r>player.r*1.12){finish();return}
+  }
+  drawFish(f.x,f.y,f.r,f.color,f.speed>0?1:-1);
+ }
+ drawFish(player.x,player.y,player.r,"#ffdc43",player.dir);
+ requestAnimationFrame(loop);
+}
+function startGame(){
+ reset();running=true;target=null;
+ message.textContent="Bơi đi, ăn cá nhỏ để lớn lên!";
+ startBtn.textContent="🔄 CHƠI LẠI";
+ last=performance.now();requestAnimationFrame(loop);
+}
+window.addEventListener("keydown",e=>{
+ if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key))e.preventDefault();
+ keys[e.key]=true;
+});
+window.addEventListener("keyup",e=>keys[e.key]=false);
+function setTarget(e){
+ let r=canvas.getBoundingClientRect();
+ target={x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height};
+}
+canvas.addEventListener("pointerdown",e=>{setTarget(e);canvas.setPointerCapture(e.pointerId)});
+canvas.addEventListener("pointermove",e=>{if(e.pointerType==="mouse"||e.buttons)setTarget(e)});
+canvas.addEventListener("pointerup",()=>{target=null});
+canvas.addEventListener("pointercancel",()=>{target=null});
+startBtn.addEventListener("click",startGame);
+reset();background(0);
+fish.forEach(f=>drawFish(f.x,f.y,f.r,f.color,f.speed>0?1:-1));
+drawFish(W/2,H/2,20,"#ffdc43",1);
+</script>
+</body>
+</html>
+
