@@ -4,184 +4,244 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ca Lon Nuot Ca Be</title>
+<title>Đại Dương Phiêu Lưu</title>
 <style>
-* { box-sizing: border-box; }
-body {
-  margin: 0;
-  background: #b9f1ff;
-  font-family: Arial, sans-serif;
-  text-align: center;
-}
-h1 { color: #075985; margin: 12px 0; }
-#info { font-size: 19px; margin: 8px; font-weight: bold; }
-canvas {
-  background: linear-gradient(#62d9f5, #087bb5);
-  border: 4px solid white;
-  border-radius: 12px;
-  width: min(94vw, 800px);
-  height: auto;
-  touch-action: none;
-}
-button {
-  padding: 12px 20px;
-  margin: 6px;
-  border: 0;
-  border-radius: 10px;
-  background: #0284c7;
-  color: white;
-  font-size: 17px;
-  cursor: pointer;
-}
-p { margin: 8px; }
+*{box-sizing:border-box}
+body{margin:0;text-align:center;font-family:Arial;background:#063b68;color:white}
+h1{margin:12px;font-size:25px}
+#info{font-size:19px;font-weight:bold;padding:10px}
+canvas{display:block;width:96%;max-width:900px;height:auto;margin:auto;
+border:3px solid #8ceaff;border-radius:12px;touch-action:none}
+button{padding:12px 22px;margin:10px;border:0;border-radius:10px;
+background:#ffb703;color:#073451;font-weight:bold;font-size:17px}
 </style>
 </head>
 <body>
-<h1>🐠 Cá Lớn Nuốt Cá Bé 🐟</h1>
-<div id="info">Điểm: 0 | Kích thước: 1</div>
-<canvas id="game" width="800" height="500"></canvas>
-<p>Dùng phím WASD hoặc phím mũi tên để di chuyển.</p>
-<button onclick="restart()">Chơi lại</button>
+<h1>🐠 ĐẠI DƯƠNG PHIÊU LƯU 🌊</h1>
+<div id="info">⭐ Điểm: 0 | 🐟 Kích thước: 1</div>
+<canvas id="game" width="900" height="520"></canvas>
+<p>Di chuyển: phím mũi tên hoặc WASD</p>
+<p>🐟 Ăn cá nhỏ: +10 điểm | 💣 Chạm mìn: -5 điểm</p>
+<button onclick="restart()">🔄 Chơi lại</button>
 
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
-const info = document.getElementById("info");
+const c=document.getElementById("game");
+const ctx=c.getContext("2d");
+const info=document.getElementById("info");
+const W=900,H=520,FLOOR=435;
+let p,fish,mines,keys,score,world,gameOver,hitLock;
+let lastTime=0,raf=0;
 
-let player, fishes, score, gameOver, keys;
-
-function restart() {
-  player = { x: 400, y: 250, r: 18, speed: 3.5 };
-  fishes = [];
-  score = 0;
-  gameOver = false;
-  keys = {};
-  for (let i = 0; i < 18; i++) spawnFish();
-  requestAnimationFrame(loop);
+function restart(){
+  cancelAnimationFrame(raf);
+  p={x:250,y:260,r:18,angle:0};
+  fish=[];mines=[];keys={};score=0;world=0;
+  gameOver=false;hitLock=0;
+  for(let i=0;i<22;i++) addFish(150+i*85);
+  for(let i=0;i<12;i++) addMine(400+i*180);
+  lastTime=0;
+  raf=requestAnimationFrame(loop);
 }
 
-function spawnFish() {
-  const r = 7 + Math.random() * 20;
-  fishes.push({
-    x: 15 + Math.random() * 770,
-    y: 15 + Math.random() * 470,
+function addFish(x){
+  const r=8+Math.random()*10;
+  fish.push({
+    x:x+Math.random()*70,
+    y:100+Math.random()*(FLOOR-125),
     r,
-    color: ["#ffcf33", "#ff718b", "#c084fc",
-            "#5eead4", "#ffffff"][Math.floor(Math.random()*5)],
-    speed: 0.4 + Math.random() * 1.1,
-    dir: Math.random() < 0.5 ? -1 : 1
+    color:["#ffd166","#ff70a6","#66e3ff","#b8f36b","#ff914d"][Math.floor(Math.random()*5)],
+    phase:Math.random()*6
   });
 }
 
-document.addEventListener("keydown", e => {
-  keys[e.key.toLowerCase()] = true;
-  if (["arrowup","arrowdown","arrowleft","arrowright"," "].includes(e.key.toLowerCase())) {
-    e.preventDefault();
-  }
-});
-document.addEventListener("keyup", e => {
-  keys[e.key.toLowerCase()] = false;
-});
+function addMine(x){
+  mines.push({x,y:100+Math.random()*280,r:17});
+}
 
-let pointerDown = false;
-canvas.addEventListener("pointerdown", () => pointerDown = true);
-canvas.addEventListener("pointerup", () => pointerDown = false);
-canvas.addEventListener("pointerleave", () => pointerDown = false);
-canvas.addEventListener("pointermove", e => {
-  if (!pointerDown || gameOver) return;
-  const rect = canvas.getBoundingClientRect();
-  player.x = (e.clientX - rect.left) * canvas.width / rect.width;
-  player.y = (e.clientY - rect.top) * canvas.height / rect.height;
+document.addEventListener("keydown",e=>{
+  const k=e.key.toLowerCase();
+  if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(k))e.preventDefault();
+  keys[k]=true;
 });
+document.addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
 
-function drawFish(f, isPlayer = false) {
+let pointer=false;
+c.addEventListener("pointerdown",e=>{pointer=true;movePointer(e)});
+c.addEventListener("pointermove",e=>{if(pointer)movePointer(e)});
+c.addEventListener("pointerup",()=>pointer=false);
+c.addEventListener("pointercancel",()=>pointer=false);
+function movePointer(e){
+  const r=c.getBoundingClientRect();
+  p.x=(e.clientX-r.left)*W/r.width;
+  p.y=(e.clientY-r.top)*H/r.height;
+  p.x=Math.max(p.r,Math.min(W-p.r,p.x));
+  p.y=Math.max(p.r,Math.min(FLOOR-p.r,p.y));
+}
+
+function drawFish(f,player=false){
   ctx.save();
-  ctx.translate(f.x, f.y);
-  if (f.dir < 0) ctx.scale(-1, 1);
-
-  ctx.fillStyle = f.color || "#ff8c42";
+  ctx.translate(f.x,f.y);
+  ctx.rotate(f.angle||0);
+  ctx.fillStyle=player?"#ff963d":f.color;
   ctx.beginPath();
-  ctx.ellipse(0, 0, f.r * 1.3, f.r * 0.8, 0, 0, Math.PI * 2);
+  ctx.ellipse(0,0,f.r*1.3,f.r*.8,0,0,Math.PI*2);
   ctx.fill();
-
   ctx.beginPath();
-  ctx.moveTo(-f.r, 0);
-  ctx.lineTo(-f.r * 1.8, -f.r * 0.7);
-  ctx.lineTo(-f.r * 1.8, f.r * 0.7);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.fillStyle = "white";
-  ctx.beginPath();
-  ctx.arc(f.r * 0.65, -f.r * 0.2, Math.max(2, f.r * 0.22), 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#123";
-  ctx.beginPath();
-  ctx.arc(f.r * 0.73, -f.r * 0.2, Math.max(1, f.r * 0.1), 0, Math.PI * 2);
-  ctx.fill();
+  ctx.moveTo(-f.r,0);
+  ctx.lineTo(-f.r*1.8,-f.r*.7);
+  ctx.lineTo(-f.r*1.8,f.r*.7);
+  ctx.closePath();ctx.fill();
+  ctx.fillStyle="white";
+  ctx.beginPath();ctx.arc(f.r*.65,-f.r*.2,Math.max(2,f.r*.22),0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#102d46";
+  ctx.beginPath();ctx.arc(f.r*.72,-f.r*.2,Math.max(1,f.r*.1),0,Math.PI*2);ctx.fill();
   ctx.restore();
 }
 
-function loop() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // Bong bóng dưới nước
-  for (let i = 0; i < 15; i++) {
-    const x = (i * 67 + 30) % 800;
-    const y = (i * 91 + Date.now() * 0.025) % 500;
-    ctx.strokeStyle = "rgba(255,255,255,0.35)";
+function drawMine(m){
+  ctx.save();ctx.translate(m.x,m.y);
+  ctx.fillStyle="#ff665b";
+  for(let i=0;i<10;i++){
+    ctx.rotate(Math.PI/5);
     ctx.beginPath();
-    ctx.arc(x, y, 3 + i % 5, 0, Math.PI * 2);
+    ctx.moveTo(m.r*.65,-m.r*.35);
+    ctx.lineTo(m.r*1.35,0);
+    ctx.lineTo(m.r*.65,m.r*.35);
+    ctx.fill();
+  }
+  ctx.fillStyle="#354d65";
+  ctx.strokeStyle="#a9c8dc";ctx.lineWidth=2;
+  ctx.beginPath();ctx.arc(0,0,m.r,0,Math.PI*2);ctx.fill();ctx.stroke();
+  ctx.fillStyle="#172c40";
+  ctx.beginPath();ctx.arc(0,0,5,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+}
+
+function background(){
+  let g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,"#087eb8");g.addColorStop(1,"#02315c");
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+
+  for(let i=0;i<24;i++){
+    const x=(i*83-world*.25%W+W*2)%W;
+    const y=25+(i*67)%330;
+    ctx.fillStyle="rgba(180,245,255,.45)";
+    ctx.beginPath();ctx.arc(x,y,2+i%4,0,Math.PI*2);ctx.fill();
+  }
+
+  // Đường đáy biển dài cuộn liên tục
+  ctx.fillStyle="#174c65";
+  ctx.beginPath();ctx.moveTo(0,FLOOR);
+  for(let x=0;x<=W;x+=20){
+    ctx.lineTo(x,FLOOR+Math.sin((x+world)*.025)*5);
+  }
+  ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.fill();
+
+  ctx.fillStyle="#e5b75d";
+  ctx.fillRect(0,FLOOR,W,22);
+  ctx.fillStyle="#ffe09a";
+  ctx.fillRect(0,FLOOR,W,5);
+
+  // Đá và rong biển chạy dọc con đường
+  for(let i=0;i<24;i++){
+    const x=(i*79-world% (W+79)+W+79)%(W+79)-20;
+    ctx.fillStyle=i%2?"#607f8a":"#8ba2a3";
+    ctx.beginPath();ctx.ellipse(x,FLOOR+12,8+i%9,5,0,0,Math.PI*2);ctx.fill();
+
+    ctx.strokeStyle=i%2?"#29c99a":"#65d59c";
+    ctx.lineWidth=4;
+    ctx.beginPath();ctx.moveTo(x,FLOOR+3);
+    ctx.quadraticCurveTo(x-14,FLOOR-15,x-6,FLOOR-36-i%3*7);
+    ctx.moveTo(x,FLOOR+3);
+    ctx.quadraticCurveTo(x+13,FLOOR-16,x+5,FLOOR-30-i%4*6);
     ctx.stroke();
   }
 
-  if (!gameOver) {
-    if (keys["arrowleft"] || keys["a"]) player.x -= player.speed;
-    if (keys["arrowright"] || keys["d"]) player.x += player.speed;
-    if (keys["arrowup"] || keys["w"]) player.y -= player.speed;
-    if (keys["arrowdown"] || keys["s"]) player.y += player.speed;
+  // Các vạch trên con đường để thấy đường đang kéo dài
+  ctx.strokeStyle="rgba(255,255,255,.35)";
+  ctx.lineWidth=2;
+  for(let i=0;i<18;i++){
+    const x=(i*65-world%(W+65)+W+65)%(W+65);
+    ctx.beginPath();ctx.moveTo(x,FLOOR+13);ctx.lineTo(x+28,FLOOR+13);ctx.stroke();
+  }
+}
 
-    player.x = Math.max(player.r, Math.min(800-player.r, player.x));
-    player.y = Math.max(player.r, Math.min(500-player.r, player.y));
+function loop(t){
+  const dt=lastTime?Math.min((t-lastTime)/16.67,2):1;
+  lastTime=t;
+  background();
 
-    for (let i = fishes.length - 1; i >= 0; i--) {
-      const f = fishes[i];
-      f.x += f.speed * f.dir;
-      if (f.x < f.r * 2 || f.x > 800 - f.r * 2) f.dir *= -1;
+  if(!gameOver){
+    const oldX=p.x,oldY=p.y;
+    let dx=0,dy=0;
+    if(keys.arrowleft||keys.a)dx--;
+    if(keys.arrowright||keys.d)dx++;
+    if(keys.arrowup||keys.w)dy--;
+    if(keys.arrowdown||keys.s)dy++;
 
-      const d = Math.hypot(player.x-f.x, player.y-f.y);
-      if (d < player.r + f.r * 0.7) {
-        if (player.r >= f.r * 0.85) {
-          score += Math.max(1, Math.round(f.r));
-          player.r = Math.min(65, player.r + 1.1);
-          fishes.splice(i, 1);
-          spawnFish();
-        } else {
-          gameOver = true;
+    if(dx||dy){
+      const len=Math.hypot(dx,dy);
+      dx/=len;dy/=len;
+      p.x+=dx*3.4*dt;p.y+=dy*3.4*dt;
+      p.angle=Math.atan2(dy,dx);
+    }
+
+    p.x=Math.max(p.r,Math.min(W-p.r,p.x));
+    p.y=Math.max(p.r,Math.min(FLOOR-p.r,p.y));
+
+    // Cuộn thế giới để tạo cảm giác đường biển dài
+    world+=(p.x-oldX)*.65;
+    p.x=250;
+
+    // Di chuyển cá và tạo cá mới phía trước
+    for(let i=fish.length-1;i>=0;i--){
+      const f=fish[i];
+      f.x-= (0.65+world*0)*dt;
+      f.y+=Math.sin(t*.002+f.phase)*.25*dt;
+
+      if(Math.hypot(p.x-f.x,p.y-f.y)<p.r+f.r*.65){
+        if(p.r>=f.r){
+          score+=10;
+          p.r=Math.min(48,p.r+.7);
+          fish.splice(i,1);
+          addFish(W+Math.random()*180);
+          continue;
         }
+      }
+      if(f.x < -30){fish.splice(i,1);addFish(W+Math.random()*250);}
+    }
+
+    // Mìn làm mất điểm, có thời gian chờ để không trừ liên tục
+    hitLock=Math.max(0,hitLock-dt);
+    for(let m of mines){
+      m.x-=.7*dt;
+      if(Math.hypot(p.x-m.x,p.y-m.y)<p.r+m.r && hitLock<=0){
+        score-=5;
+        hitLock=45;
+        m.x=W+200+Math.random()*300;
+        m.y=100+Math.random()*280;
+      }
+      if(m.x < -40){
+        m.x=W+200+Math.random()*400;
+        m.y=100+Math.random()*280;
       }
     }
   }
 
-  fishes.forEach(f => drawFish(f));
-  drawFish(player, true);
+  fish.forEach(f=>drawFish(f));
+  mines.forEach(drawMine);
+  drawFish(p,true);
 
-  info.textContent = "Điểm: " + score +
-    " | Kích thước: " + Math.round(player.r / 18 * 10) / 10;
+  info.textContent="⭐ Điểm: "+score+" | 🐟 Kích thước: "+(p.r/18).toFixed(1);
 
-  if (gameOver) {
-    ctx.fillStyle = "rgba(0,0,0,0.65)";
-    ctx.fillRect(0, 0, 800, 500);
-    ctx.fillStyle = "white";
-    ctx.textAlign = "center";
-    ctx.font = "bold 42px Arial";
-    ctx.fillText("GAME OVER!", 400, 230);
-    ctx.font = "24px Arial";
-    ctx.fillText("Điểm của bạn: " + score, 400, 275);
-    ctx.fillText("Nhấn Chơi lại để thử tiếp", 400, 320);
-  } else {
-    requestAnimationFrame(loop);
+  if(gameOver){
+    ctx.fillStyle="rgba(0,0,0,.65)";
+    ctx.fillRect(0,0,W,H);
+    ctx.fillStyle="white";ctx.textAlign="center";
+    ctx.font="bold 40px Arial";
+    ctx.fillText("HẾT LƯỢT!",W/2,H/2);
   }
+  raf=requestAnimationFrame(loop);
 }
 restart();
 </script>
