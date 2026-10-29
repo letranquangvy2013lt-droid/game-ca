@@ -38,12 +38,9 @@ function restart(){
   fish=[];mines=[];keys={};score=0;world=0;
   gameOver=false;hitLock=0;
   for(let i=0;i<22;i++) addFish(150+i*85);
-  for(let i=0;i<12;i++) addMine(400+i*180);
-  lastTime=0;
+ for(let i=0;i<30;i++) addMine(400+i*120);
   raf=requestAnimationFrame(loop);
 }
-
-
 function addFish(x){
   const r=8+Math.random()*10;
   fish.push({
