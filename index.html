@@ -43,22 +43,27 @@ function restart(){
   raf=requestAnimationFrame(loop);
 }
 
+
 function addFish(x){
   const r=8+Math.random()*10;
   fish.push({
     x:x+Math.random()*70,
-    y:100+Math.random()*(FLOOR-125),
+    y:100+Math.random()*280,
     r,
     color:["#ffd166","#ff70a6","#66e3ff","#b8f36b","#ff914d"][Math.floor(Math.random()*5)],
-    phase:Math.random()*6
+    phase:Math.random()*6,
+    speed:0.8+Math.random()*1.5
   });
-}
 
 function addMine(x){
-  mines.push({x,y:100+Math.random()*280,r:17});
+  mines.push({
+    x,
+    y:100+Math.random()*280,
+    r:17,
+    phase:Math.random()*6,
+    speed:0.6+Math.random()*0.8
+  });
 }
-
-document.addEventListener("keydown",e=>{
   const k=e.key.toLowerCase();
   if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(k))e.preventDefault();
   keys[k]=true;
@@ -213,37 +218,23 @@ function loop(t){
 
     // Mìn làm mất điểm, có thời gian chờ để không trừ liên tục
     hitLock=Math.max(0,hitLock-dt);
-    for(let m of mines){
-      m.x-=.7*dt;
-      if(Math.hypot(p.x-m.x,p.y-m.y)<p.r+m.r && hitLock<=0){
-        score-=5;
-        hitLock=45;
-        m.x=W+200+Math.random()*300;
-        m.y=100+Math.random()*280;
-      }
-      if(m.x < -40){
-        m.x=W+200+Math.random()*400;
-        m.y=100+Math.random()*280;
-      }
-    }
+   
+for(let m of mines){
+  // Mìn trôi sang trái và lên xuống
+  m.x-=m.speed*dt;
+  m.y+=Math.sin(t*0.002+m.phase)*1.2*dt;
+
+  if(Math.hypot(p.x-m.x,p.y-m.y)<p.r+m.r && hitLock<=0){
+    score-=5;
+    hitLock=45;
+    m.x=W+200+Math.random()*300;
+    m.y=100+Math.random()*280;
+    m.phase=Math.random()*6;
   }
 
-  fish.forEach(f=>drawFish(f));
-  mines.forEach(drawMine);
-  drawFish(p,true);
-
-  info.textContent="⭐ Điểm: "+score+" | 🐟 Kích thước: "+(p.r/18).toFixed(1);
-
-  if(gameOver){
-    ctx.fillStyle="rgba(0,0,0,.65)";
-    ctx.fillRect(0,0,W,H);
-    ctx.fillStyle="white";ctx.textAlign="center";
-    ctx.font="bold 40px Arial";
-    ctx.fillText("HẾT LƯỢT!",W/2,H/2);
+  if(m.x < -40){
+    m.x=W+200+Math.random()*400;
+    m.y=100+Math.random()*280;
+    m.phase=Math.random()*6;
   }
-  raf=requestAnimationFrame(loop);
 }
-restart();
-</script>
-</body>
-</html>
