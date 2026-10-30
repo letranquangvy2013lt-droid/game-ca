@@ -1,351 +1,244 @@
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Thế Giới Cá Mập 3D</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thế Giới Cá Mập</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;overflow:hidden;background:#03172c;color:white;font-family:Arial,sans-serif}
-button{cursor:pointer;border:0;border-radius:12px;padding:13px 25px;font-weight:bold;color:white;background:linear-gradient(135deg,#08a9d9,#2455c7);box-shadow:0 4px 15px #001b4d}
-button:hover{filter:brightness(1.2);transform:scale(1.04)}
-#ocean{position:fixed;inset:0}
-#menu{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:linear-gradient(180deg,#00152a55,#00152acc)}
-h1{font-size:clamp(35px,7vw,70px);color:#8ceaff;text-shadow:0 0 20px #00bfff;margin:0 0 8px}
-.subtitle{letter-spacing:5px;color:#b9eaff;margin-bottom:35px}
-.buttons{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}
-#game{display:none;position:fixed;inset:0;background:#063b60}
-#gameCanvas{width:100%;height:100%;display:block}
-#hud{position:absolute;top:15px;left:15px;right:15px;display:flex;justify-content:space-between;align-items:center;pointer-events:none;gap:10px}
-.hudbox{background:#001d40bb;border:1px solid #70dfff88;border-radius:12px;padding:10px 15px;font-weight:bold}
-#backBtn{pointer-events:auto}
-#help{position:absolute;bottom:15px;left:50%;transform:translateX(-50%);background:#001d40bb;padding:10px 16px;border-radius:12px;text-align:center;white-space:nowrap}
-#message{display:none;position:fixed;inset:0;align-items:center;justify-content:center;text-align:center;background:#001027cc;z-index:10;overflow:hidden}
-#message .content{position:relative;z-index:2;padding:30px 20px;max-width:650px;width:92%}
-#message h2{font-size:clamp(43px,9vw,85px);margin:0 0 12px;color:#ffe78a;text-shadow:0 0 12px #ffb000,0 0 35px #ff8c00}
-#message p{font-size:19px;color:#fff3c4}
-#message .trophy{font-size:75px;filter:drop-shadow(0 0 20px gold)}
-#message .actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:25px}
-#message button{background:linear-gradient(135deg,#ffcf48,#d87900);color:#351800}
-.spark{position:absolute;width:7px;height:7px;border-radius:50%;background:#ffe77a;box-shadow:0 0 15px 5px #ffae00;animation:burst 1.5s infinite}
-@keyframes burst{0%{transform:scale(.2);opacity:0}40%{opacity:1}100%{transform:scale(2.8);opacity:0}}
-@media(max-width:600px){.buttons{flex-direction:column;width:75%}.buttons button{width:100%}#help{font-size:12px;white-space:normal;width:90%}}
+body{margin:0;text-align:center;font-family:Arial;color:white;background:#063b63}
+h1{color:#ffe77a;text-shadow:2px 3px 5px #00334d}
+#info{display:flex;justify-content:center;gap:22px;flex-wrap:wrap;font-size:18px;font-weight:bold;margin:12px}
+canvas{width:min(96vw,900px);height:auto;display:block;margin:10px auto;border:4px solid #b7e9ff;border-radius:12px;touch-action:none}
+button{padding:12px 25px;border:0;border-radius:10px;background:#ffcf35;font-size:17px;font-weight:bold;cursor:pointer;margin:4px}
+#lobbyScreen{position:fixed;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;overflow:hidden;background:linear-gradient(180deg,#031a39aa,#031a39dd)}
+#lobby3d{position:absolute;inset:0;z-index:0}
+#lobby3d canvas{width:100%!important;height:100%!important;display:block;margin:0;border:0;border-radius:0}
+.lobbyShade{position:absolute;inset:0;z-index:1;background:linear-gradient(90deg,#00162b88,#00162b22,#00162b88);pointer-events:none}
+.lobbyContent{position:relative;z-index:2;width:min(94%,780px);padding:24px;text-align:center}
+.lobbyTitle{font-size:clamp(35px,7vw,72px);font-weight:900;color:#c4f5ff;text-shadow:0 0 14px #00cfff,0 0 34px #087cbf;margin:0}
+.lobbySub{letter-spacing:5px;color:#e2faff;margin:10px 0 32px}
+.lobbyButtons{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}
+.lobbyButtons button{background:linear-gradient(135deg,#27d8ef,#1764b8);color:white;border:1px solid #a9f4ff;padding:14px 22px;min-width:145px;box-shadow:0 0 18px #00aaff66}
+.lobbyTagline{color:#d7f6ff;margin-top:25px}
+#lobbyInfo{display:none;position:fixed;inset:0;z-index:20;background:#00152bdd;align-items:center;justify-content:center;padding:20px}
+#lobbyInfo .infoCard{background:linear-gradient(145deg,#0b4770,#081c3d);border:1px solid #7ceaff;border-radius:18px;padding:26px;max-width:420px;width:100%;box-shadow:0 0 30px #00bfff66}
+#lobbyInfo h2{color:#9ceeff}
+#lobbyInfo p{line-height:1.6}
+#gameScreen{min-height:100vh;padding:1px 0 20px}
+@media(max-width:600px){.lobbyButtons{flex-direction:column;align-items:center}.lobbyButtons button{width:min(85%,300px)}}
 </style>
 </head>
 <body>
 
-<div id="ocean"></div>
-
-<div id="menu">
-  <h1>THẾ GIỚI CÁ MẬP</h1>
-  <div class="subtitle">FANTASY OCEAN 3D</div>
-  <div class="buttons">
-    <button onclick="startGame()">▶ BẮT ĐẦU</button>
-    <button onclick="showInfo('CỬA HÀNG','Cửa hàng sẽ được mở khóa trong phiên bản tiếp theo!')">CỬA HÀNG</button>
-    <button onclick="showInfo('BỘ SƯU TẬP','Khám phá những loài cá đặc biệt trong đại dương!')">BỘ SƯU TẬP</button>
-    <button onclick="showInfo('CÀI ĐẶT','Dùng chuột hoặc phím WASD để điều khiển cá.')">CÀI ĐẶT</button>
-  </div>
-</div>
-
-<div id="game">
-  <canvas id="gameCanvas"></canvas>
-  <div id="hud">
-    <div class="hudbox">🐟 Điểm: <span id="score">0</span> / 100</div>
-    <div class="hudbox">📏 Kích thước: <span id="size">1</span></div>
-    <button id="backBtn" onclick="backToLobby()">VỀ SẢNH</button>
-  </div>
-  <div id="help">Di chuyển bằng chuột hoặc phím WASD / phím mũi tên. Ăn cá nhỏ để lớn lên!</div>
-</div>
-
-<div id="message">
-  <div class="content">
-    <div class="trophy">🏆</div>
-    <h2 id="panelTitle">CHIẾN THẮNG!</h2>
-    <p id="panelText">Bạn đã trở thành bá chủ đại dương!</p>
-    <div class="actions">
-      <button onclick="restartGame()">↻ CHƠI LẠI</button>
-      <button onclick="backToLobby()">⌂ VỀ SẢNH</button>
+<div id="lobbyScreen">
+  <div id="lobby3d"></div>
+  <div class="lobbyShade"></div>
+  <div class="lobbyContent">
+    <h1 class="lobbyTitle">🦈 THẾ GIỚI CÁ MẬP 🦈</h1>
+    <div class="lobbySub">FANTASY OCEAN · SẢNH CHỜ</div>
+    <div class="lobbyButtons">
+      <button onclick="enterGame()">▶ BẮT ĐẦU</button>
+      <button onclick="lobbyInfo('CỬA HÀNG','Cửa hàng sẽ được bổ sung trong phiên bản tiếp theo.')">CỬA HÀNG</button>
+      <button onclick="lobbyInfo('BỘ SƯU TẬP','Khám phá các loài cá và sinh vật trong đại dương.')">BỘ SƯU TẬP</button>
+      <button onclick="lobbyInfo('HƯỚNG DẪN','Dùng WASD, phím mũi tên hoặc chạm vào nơi muốn bơi. Ăn cá nhỏ để lớn lên, tránh cá tím khổng lồ và mìn. Sống sót đủ 5 phút để chiến thắng!')">HƯỚNG DẪN</button>
     </div>
+    <p class="lobbyTagline">Khám phá đại dương · Sinh tồn · Trở thành cá mập lớn nhất</p>
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<div id="lobbyInfo">
+  <div class="infoCard">
+    <h2 id="lobbyInfoTitle"></h2>
+    <p id="lobbyInfoText"></p>
+    <button onclick="closeLobbyInfo()">ĐÓNG</button>
+  </div>
+</div>
+
+<div id="gameScreen" style="display:none">
+<h1>🦈 THẾ GIỚI CÁ MẬP 🦈</h1>
+<div id="info">
+<span id="score">Điểm: 0</span>
+<span id="lives">Mạng: 4/4</span>
+<span id="size">Kích thước: 18</span>
+<span id="timer">Thời gian: 05:00</span>
+</div>
+<canvas id="game" width="900" height="520"></canvas>
+<button onclick="togglePause()" id="pauseButton">⏸️ TẠM DỪNG</button>
+<button onclick="restart()">🔄 CHƠI LẠI</button>
+<p>Dùng WASD, phím mũi tên hoặc chạm vào nơi muốn bơi. Sống sót đủ 5 phút để chiến thắng!</p>
+<button onclick="backToLobby()">🏠 VỀ SẢNH CHỜ</button>
+</div>
+
 <script>
-/* ===== SẢNH ĐẠI DƯƠNG 3D ===== */
-const ocean=document.getElementById("ocean");
-let scene,camera,renderer,shark,clock;
-function random(a,b){return Math.random()*(b-a)+a}
-
-if(window.THREE){
- scene=new THREE.Scene();
- scene.background=new THREE.Color(0x052c50);
- scene.fog=new THREE.Fog(0x052c50,15,65);
- camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,.1,100);
- camera.position.set(0,5,17);
- renderer=new THREE.WebGLRenderer({antialias:true});
- renderer.setSize(innerWidth,innerHeight);
- renderer.setPixelRatio(Math.min(devicePixelRatio,2));
- ocean.appendChild(renderer.domElement);
- clock=new THREE.Clock();
-
- scene.add(new THREE.HemisphereLight(0x9deaff,0x102344,2));
- const light=new THREE.DirectionalLight(0x8deaff,2);
- light.position.set(-5,10,8);scene.add(light);
-
- const floor=new THREE.Mesh(
-  new THREE.PlaneGeometry(100,100),
-  new THREE.MeshStandardMaterial({color:0x075078,roughness:1})
- );
- floor.rotation.x=-Math.PI/2;floor.position.y=-4;scene.add(floor);
-
- // Hang động
- const caveMat=new THREE.MeshStandardMaterial({color:0x102b46,roughness:1});
- for(let i=0;i<16;i++){
-  const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(random(1,2.2),1),caveMat);
-  rock.position.set(random(-15,-8),random(-2,5),random(-12,-7));
-  rock.scale.y=random(.7,1.5);scene.add(rock);
- }
- const caveHole=new THREE.Mesh(
-  new THREE.CircleGeometry(3,40),
-  new THREE.MeshBasicMaterial({color:0x010b20})
- );
- caveHole.position.set(-11,0,-6);scene.add(caveHole);
-
- // San hô
- const coralColors=[0xff6688,0xffa43b,0xb56bff,0x37e0c2];
- for(let i=0;i<35;i++){
-  const group=new THREE.Group();
-  const color=coralColors[i%coralColors.length];
-  const mat=new THREE.MeshStandardMaterial({color,roughness:.5});
-  for(let j=0;j<4;j++){
-   const stem=new THREE.Mesh(new THREE.CylinderGeometry(.12,.22,random(1,2.5),8),mat);
-   stem.position.set(random(-.5,.5),random(.5,1.3),random(-.4,.4));
-   stem.rotation.z=random(-.5,.5);group.add(stem);
-  }
-  group.position.set(random(-18,18),-3.5,random(-12,4));
-  scene.add(group);
- }
-
- // Rong biển
- for(let i=0;i<30;i++){
-  const seaweed=new THREE.Mesh(
-   new THREE.CylinderGeometry(.04,.12,random(1,3),7),
-   new THREE.MeshStandardMaterial({color:0x20a878})
-  );
-  seaweed.position.set(random(-18,18),-2.5,random(-10,5));
-  scene.add(seaweed);
- }
-
- // Pha lê phát sáng
- for(let i=0;i<12;i++){
-  const crystal=new THREE.Mesh(
-   new THREE.OctahedronGeometry(random(.3,.7)),
-   new THREE.MeshStandardMaterial({color:0x58eaff,emissive:0x087dbb,emissiveIntensity:2})
-  );
-  crystal.position.set(random(-15,15),random(-2,3),random(-10,2));
-  scene.add(crystal);
- }
-
- // Cá mập 3D
- shark=new THREE.Group();
- const bodyMat=new THREE.MeshStandardMaterial({color:0x6aabc5,roughness:.45});
- const bellyMat=new THREE.MeshStandardMaterial({color:0xe6f6fa});
- const body=new THREE.Mesh(new THREE.SphereGeometry(1,32,24),bodyMat);
- body.scale.set(2.1,.8,.8);shark.add(body);
- const belly=new THREE.Mesh(new THREE.SphereGeometry(1,24,16),bellyMat);
- belly.scale.set(1.7,.35,.65);belly.position.y=-.35;shark.add(belly);
- const tail=new THREE.Mesh(new THREE.ConeGeometry(.7,1.5,4),bodyMat);
- tail.rotation.z=Math.PI/2;tail.position.x=-2.5;shark.add(tail);
- const fin=new THREE.Mesh(new THREE.ConeGeometry(.55,1.4,4),bodyMat);
- fin.position.set(0,.9,0);shark.add(fin);
- shark.position.set(0,0,1);scene.add(shark);
-
- // Bong bóng
- const bubbles=[];
- for(let i=0;i<45;i++){
-  const b=new THREE.Mesh(
-   new THREE.SphereGeometry(random(.04,.13),10,10),
-   new THREE.MeshBasicMaterial({color:0x9deaff,transparent:true,opacity:.6})
-  );
-  b.position.set(random(-18,18),random(-4,8),random(-10,5));
-  scene.add(b);bubbles.push(b);
- }
-
- function animate(){
-  requestAnimationFrame(animate);
-  const t=clock.getElapsedTime();
-  shark.position.y=Math.sin(t*1.5)*.25;
-  shark.rotation.z=Math.sin(t)*.06;
-  tail.rotation.y=Math.sin(t*5)*.3;
-  bubbles.forEach(b=>{b.position.y+=.012;if(b.position.y>9)b.position.y=-4});
-  renderer.render(scene,camera);
- }
- animate();
-}
-window.addEventListener("resize",()=>{
- if(camera&&renderer){
-  camera.aspect=innerWidth/innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth,innerHeight);
- }
-});
-
-/* ===== MENU ===== */
-function showInfo(title,text){
- document.getElementById("panelTitle").textContent=title;
- document.getElementById("panelText").textContent=text;
- document.querySelector("#message .trophy").textContent="🌊";
- document.getElementById("message").style.display="flex";
-}
-function closeMessage(){
- document.getElementById("message").style.display="none";
-}
-function startGame(){
- closeMessage();
- document.getElementById("menu").style.display="none";
- document.getElementById("game").style.display="block";
- resizeGame();
- resetGame();
-}
-function backToLobby(){
- playing=false;
- closeMessage();
- document.getElementById("game").style.display="none";
- document.getElementById("menu").style.display="flex";
-}
-
-/* ===== GAME CÁ LỚN NUỐT CÁ BÉ ===== */
-const canvas=document.getElementById("gameCanvas");
+const canvas=document.getElementById("game");
 const ctx=canvas.getContext("2d");
-let W,H,player,fishList,score,playing=false,mouse={x:0,y:0},keys={};
-function resizeGame(){
- W=canvas.width=innerWidth*devicePixelRatio;
- H=canvas.height=innerHeight*devicePixelRatio;
- ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
- W=innerWidth;H=innerHeight;
-}
-window.addEventListener("resize",()=>{if(document.getElementById("game").style.display==="block")resizeGame()});
-canvas.addEventListener("mousemove",e=>{mouse.x=e.clientX;mouse.y=e.clientY});
-canvas.addEventListener("touchmove",e=>{
- const t=e.touches[0];mouse.x=t.clientX;mouse.y=t.clientY;
- e.preventDefault();
-},{passive:false});
-window.addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
-window.addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
 
-function makeFish(){
- const size=random(12,35);
- return {x:random(20,W-20),y:random(60,H-40),r:size,
-  speed:random(.5,1.7),dir:Math.random()<.5?-1:1,
-  color:["#ff9f43","#ff6b9d","#62e6ce","#d49bff","#ffe36e"][Math.floor(random(0,5))]};
-}
-function resetGame(){
- score=0;
- player={x:W/2,y:H/2,r:22};
- fishList=[];
- for(let i=0;i<35;i++)fishList.push(makeFish());
- document.getElementById("score").textContent=score;
- playing=true;
- requestAnimationFrame(gameLoop);
-}
-function drawFish(f){
- ctx.save();ctx.translate(f.x,f.y);ctx.scale(f.dir,1);
- ctx.fillStyle=f.color;
- ctx.beginPath();ctx.ellipse(0,0,f.r*1.3,f.r*.75,0,0,Math.PI*2);ctx.fill();
- ctx.beginPath();ctx.moveTo(-f.r,0);ctx.lineTo(-f.r*1.8,-f.r*.8);ctx.lineTo(-f.r*1.8,f.r*.8);ctx.fill();
- ctx.fillStyle="white";ctx.beginPath();ctx.arc(f.r*.65,-f.r*.18,f.r*.16,0,Math.PI*2);ctx.fill();
- ctx.fillStyle="#10243a";ctx.beginPath();ctx.arc(f.r*.7,-f.r*.18,f.r*.08,0,Math.PI*2);ctx.fill();
- ctx.restore();
-}
-function drawPlayer(){
- ctx.save();ctx.translate(player.x,player.y);
- ctx.fillStyle="#4fc3e8";
- ctx.beginPath();ctx.ellipse(0,0,player.r*1.5,player.r*.8,0,0,Math.PI*2);ctx.fill();
- ctx.fillStyle="#d9f6ff";
- ctx.beginPath();ctx.ellipse(5,player.r*.35,player.r,player.r*.3,0,0,Math.PI*2);ctx.fill();
- ctx.fillStyle="#4fc3e8";
- ctx.beginPath();ctx.moveTo(-player.r,0);ctx.lineTo(-player.r*1.9,-player.r*.8);ctx.lineTo(-player.r*1.9,player.r*.8);ctx.fill();
- ctx.fillStyle="white";ctx.beginPath();ctx.arc(player.r*.8,-player.r*.2,player.r*.13,0,Math.PI*2);ctx.fill();
- ctx.fillStyle="#10243a";ctx.beginPath();ctx.arc(player.r*.84,-player.r*.2,player.r*.07,0,Math.PI*2);ctx.fill();
- ctx.restore();
-}
-function gameLoop(){
- if(!playing)return;
- ctx.clearRect(0,0,W,H);
- const bg=ctx.createLinearGradient(0,0,0,H);
- bg.addColorStop(0,"#0878a8");bg.addColorStop(1,"#032846");
- ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+let p,fish,mines,purpleFish,keys,score,world;
+let hitLock,gameOver,raf,lastTime;
+let pointer=null,bubbles=[],jellyfish=[],explosions=[];
+let animationTime=0;
+let timeLeft=300,victory=false,paused=false;
+let fireworks=[],confetti=[],victoryStarted=false;
+let fireworkCooldown=0;
 
- // Ánh sáng và bong bóng
- for(let i=0;i<18;i++){
-  const x=(i*137+performance.now()*.015)%W;
-  const y=(i*83+performance.now()*.025)%H;
-  ctx.strokeStyle="#b5efff55";ctx.beginPath();ctx.arc(x,y,3+(i%4),0,Math.PI*2);ctx.stroke();
- }
+const rand=(a,b)=>Math.random()*(b-a)+a;
 
- let dx=0,dy=0;
- if(keys["arrowleft"]||keys["a"])dx--;
- if(keys["arrowright"]||keys["d"])dx++;
- if(keys["arrowup"]||keys["w"])dy--;
- if(keys["arrowdown"]||keys["s"])dy++;
- if(mouse.x||mouse.y){
-  const mx=mouse.x-player.x,my=mouse.y-player.y;
-  if(Math.hypot(mx,my)>8){dx=mx;dy=my}
- }
- const len=Math.hypot(dx,dy)||1;
- player.x+=dx/len*3.2;player.y+=dy/len*3.2;
- player.x=Math.max(player.r,Math.min(W-player.r,player.x));
- player.y=Math.max(player.r+45,Math.min(H-player.r,player.y));
-
- fishList.forEach((f,i)=>{
-  f.x+=f.speed*f.dir;
-  if(f.x>W+50)f.x=-50;
-  if(f.x< -50)f.x=W+50;
-  drawFish(f);
-  const distance=Math.hypot(player.x-f.x,player.y-f.y);
-  if(distance<player.r+f.r*.7){
-   if(player.r>f.r*.85){
-    score+=5;
-    player.r+=.65;
-    fishList[i]=makeFish();
-    document.getElementById("score").textContent=score;
-    document.getElementById("size").textContent=Math.floor(player.r/22*10)/10;
-   }else{
-    // Cá lớn hơn sẽ không bị ăn; chỉ đẩy cá nhỏ ra xa
-    f.x+=f.dir*25;
-   }
-  }
+function addFish(x){
+ const styles=["cute","colorful","natural"];
+ const colors=["#ff9f43","#ff6fae","#ffe66d","#55d6be","#a78bfa","#55aaff","#ff795e"];
+ fish.push({
+  x,y:rand(65,420),r:rand(9,17),speed:rand(.7,1.8),
+  phase:rand(0,7),direction:Math.random()<.5?1:-1,
+  style:styles[Math.floor(rand(0,3))],
+  color:colors[Math.floor(rand(0,colors.length))]
  });
- drawPlayer();
+}
 
- if(score>=100){winGame();return}
- requestAnimationFrame(gameLoop);
+function addMine(x){
+ mines.push({x,y:rand(70,420),r:17,speed:rand(2,3.5),phase:rand(0,7)});
 }
-function winGame(){
- playing=false;
- document.getElementById("panelTitle").textContent="CHIẾN THẮNG!";
- document.getElementById("panelText").textContent="Xuất sắc! Bạn đã trở thành bá chủ đại dương!";
- document.querySelector("#message .trophy").textContent="🏆";
- document.getElementById("message").style.display="flex";
- makeFireworks();
+
+function addPurpleFish(x){
+ purpleFish.push({x,y:rand(100,380),r:48,speed:rand(.8,1.4),phase:rand(0,7),direction:Math.random()<.5?1:-1});
 }
-function restartGame(){
- closeMessage();
- document.getElementById("game").style.display="block";
- resizeGame();resetGame();
+
+function createBubbles(){
+ bubbles=[];
+ for(let i=0;i<45;i++)bubbles.push({x:rand(0,900),y:rand(0,520),r:rand(2,7),speed:rand(.4,1.5)});
 }
-function makeFireworks(){
- const box=document.getElementById("message");
+
+function createJellyfish(){
+ jellyfish=[];
+ const colors=["#ff8de2","#8ceaff","#d6a0ff","#fff08c"];
+ for(let i=0;i<7;i++)jellyfish.push({
+  x:rand(50,850),y:rand(50,450),r:rand(13,23),
+  speed:rand(.3,.8),phase:rand(0,7),color:colors[i%4]
+ });
+}
+
+function createExplosion(x,y){
+ const particles=[];
  for(let i=0;i<35;i++){
-  const s=document.createElement("div");
-  s.className="spark";
-  s.style.left=random(5,95)+"%";
-  s.style.top=random(5,90)+"%";
-  s.style.animationDelay=random(0,1.5)+"s";
-  box.appendChild(s);
+  const a=rand(0,Math.PI*2),s=rand(2,7);
+  particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,size:rand(3,7),life:1});
+ }
+ explosions.push({x,y,radius:5,life:1,particles});
+}
+
+function drawExplosions(dt){
+ for(let i=explosions.length-1;i>=0;i--){
+  const e=explosions[i];
+  e.life-=.035*dt;e.radius+=5*dt;
+  ctx.save();
+  ctx.globalAlpha=Math.max(0,e.life);
+  ctx.strokeStyle="#ffcc33";ctx.lineWidth=6;
+  ctx.beginPath();ctx.arc(e.x,e.y,e.radius,0,Math.PI*2);ctx.stroke();
+  const g=ctx.createRadialGradient(e.x,e.y,2,e.x,e.y,e.radius);
+  g.addColorStop(0,"white");g.addColorStop(.35,"#ffdd33");g.addColorStop(1,"rgba(255,60,0,0)");
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(e.x,e.y,e.radius,0,7);ctx.fill();
+  for(const a of e.particles){
+   a.x+=a.vx*dt;a.y+=a.vy*dt;a.life-=.035*dt;
+   ctx.globalAlpha=Math.max(0,a.life)*Math.max(0,e.life);
+   ctx.fillStyle=a.life>.5?"#ffcc22":"#ff5522";
+   ctx.beginPath();ctx.arc(a.x,a.y,a.size*Math.max(0,a.life),0,7);ctx.fill();
+  }
+  ctx.restore();
+  if(e.life<=0)explosions.splice(i,1);
  }
 }
-</script>
-</body>
-</html>
+
+function drawSunlight(t){
+ ctx.save();
+ for(let i=0;i<9;i++){
+  const x=40+i*110,sway=Math.sin(t*.0005+i)*25;
+  ctx.fillStyle="rgba(255,245,180,.07)";
+  ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+35+sway,390);
+  ctx.lineTo(x+95+sway,390);ctx.lineTo(x+65,0);ctx.fill();
+ }
+ ctx.restore();
+}
+
+function drawBubbles(dt){
+ for(const b of bubbles){
+  b.y-=b.speed*dt;b.x+=Math.sin(b.y*.025)*.5*dt;
+  if(b.y<-10){b.y=530;b.x=rand(0,900);}
+  ctx.strokeStyle="rgba(220,250,255,.7)";ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,7);ctx.stroke();
+  ctx.fillStyle="rgba(255,255,255,.7)";
+  ctx.beginPath();ctx.arc(b.x-b.r*.3,b.y-b.r*.3,b.r*.2,0,7);ctx.fill();
+ }
+}
+
+function drawJellyfish(t,dt){
+ for(const j of jellyfish){
+  j.y+=Math.sin(t*.001+j.phase)*.5*dt-j.speed*.25*dt;
+  j.x+=Math.sin(t*.0007+j.phase)*.35*dt;
+  if(j.y<-50){j.y=550;j.x=rand(50,850);}
+  ctx.save();ctx.translate(j.x,j.y);
+  ctx.shadowColor=j.color;ctx.shadowBlur=22;ctx.fillStyle=j.color;
+  ctx.beginPath();ctx.arc(0,0,j.r,Math.PI,0);
+  ctx.quadraticCurveTo(j.r,j.r*.8,0,j.r*.55);
+  ctx.quadraticCurveTo(-j.r,j.r*.8,-j.r,0);ctx.fill();
+  ctx.strokeStyle=j.color;ctx.lineWidth=2;
+  for(let i=-2;i<=2;i++){
+   ctx.beginPath();ctx.moveTo(i*j.r*.28,j.r*.45);
+   ctx.quadraticCurveTo(i*j.r*.3+Math.sin(t*.004+i)*5,j.r,i*j.r*.35,j.r*1.5);ctx.stroke();
+  }
+  ctx.shadowBlur=0;ctx.fillStyle="#333";
+  ctx.beginPath();ctx.arc(-j.r*.3,0,2,0,7);ctx.arc(j.r*.3,0,2,0,7);ctx.fill();
+  ctx.restore();
+ }
+}
+
+function background(t,dt){
+ const g=ctx.createLinearGradient(0,0,0,520);
+ g.addColorStop(0,"#24c5dc");g.addColorStop(.45,"#078fb6");g.addColorStop(1,"#003b68");
+ ctx.fillStyle=g;ctx.fillRect(0,0,900,520);
+ drawSunlight(t);
+ ctx.fillStyle="#e6cb79";ctx.fillRect(0,475,900,45);
+ for(let i=0;i<35;i++){
+  let x=(i*37-world*1.2)%900;if(x<0)x+=900;
+  ctx.fillStyle="#c9a957";ctx.beginPath();ctx.arc(x,490+(i%3)*8,3,0,7);ctx.fill();
+ }
+ for(let i=0;i<12;i++){
+  let x=(i*95-world*.5)%950;if(x<0)x+=950;
+  ctx.strokeStyle=i%2?"#168b59":"#37a85d";ctx.lineWidth=7;
+  ctx.beginPath();ctx.moveTo(x,475);
+  ctx.quadraticCurveTo(x-20,440,x+Math.sin(t*.002+i)*18,400);ctx.stroke();
+ }
+ for(let i=0;i<8;i++){
+  let x=(i*125-world*.35)%1000;if(x<0)x+=1000;
+  ctx.strokeStyle=["#ff8066","#ff5ebc","#f4a64a","#a87ce8"][i%4];
+  ctx.lineWidth=6;ctx.lineCap="round";
+  ctx.beginPath();ctx.moveTo(x,475);ctx.lineTo(x,450);
+  ctx.lineTo(x-12,435);ctx.moveTo(x,450);ctx.lineTo(x+12,430);
+  ctx.moveTo(x,460);ctx.lineTo(x+18,448);ctx.stroke();
+ }
+}
+
+function drawCreature(f,t,player=false,purple=false){
+ const r=f.r,phase=t*.009+(f.phase||0);
+ const wiggle=Math.sin(phase)*.23,tail=Math.sin(phase*1.5)*.35;
+ const dir=player?1:(f.direction||1);
+ ctx.save();ctx.translate(f.x,f.y);
+ if(player)ctx.rotate(p.angle);else if(dir<0)ctx.scale(-1,1);
+ ctx.save();ctx.rotate(tail);
+ ctx.fillStyle=purple?"#8b35c9":player?"#707b84":f.color;
+ ctx.beginPath();ctx.moveTo(-r*.65,0);ctx.lineTo(-r*1.65,-r*.85);
+ ctx.lineTo(-r*1.45,0);ctx.lineTo(-r*1.65,r*.85);ctx.closePath();ctx.fill();
+ ctx.restore();
+ ctx.save();ctx.rotate(wiggle);
+ let bodyColor=purple?"#a855e8":player?"#7d8991":f.color;
+ ctx.fillStyle=bodyColor;
+ ctx.beginPath();ctx.ellipse(0,0,r*1.25,r*.72,0,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle=player?"#dce4e8":"#fff";
+ ctx.beginPath();ctx.ellipse(r*.25,r*.25,r*.72,r*.25,0,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle=bodyColor;
+ ctx.beginPath();ctx.moveTo(-r*.2,-r*.55);ctx.lineTo(r*.15,-r*1.05);ctx.lineTo(r*.55,-r*.55);ctx.fill();
+ ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(r*.65,-r*.15,r*.16,0,7);ctx.fill();
+ ctx.fillStyle="#111";ctx.beginPath();ctx.arc(r*.7,-r*.15,r*.08,0,7);ctx.fill();
+ ctx.strokeStyle="#17394b";ctx.lineWidth=2;
+ ctx.beginPath();ctx.arc(r*.85,r*.2,r*.2,.2,1.8);ctx.stroke();
+ ctx.restore();ctx.restore();
+}
