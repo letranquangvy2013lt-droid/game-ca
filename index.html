@@ -218,7 +218,7 @@ function loop(t){
    
 for(let m of mines){
   // Mìn trôi sang trái và lên xuống
-  m.x-=m.speed*dt;
+ m.x-=m.speed*1.5*dt;
   m.y+=Math.sin(t*0.002+m.phase)*1.2*dt;
 
   if(Math.hypot(p.x-m.x,p.y-m.y)<p.r+m.r && hitLock<=0){
@@ -228,7 +228,7 @@ for(let m of mines){
     m.y=100+Math.random()*280;
     m.phase=Math.random()*6;
   }
-
+speed:2+Math.random()*2
   if(m.x < -40){
     m.x=W+200+Math.random()*400;
     m.y=100+Math.random()*280;
