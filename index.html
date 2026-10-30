@@ -52,12 +52,11 @@ p { margin: 8px; }
 
 <div id="info">
   <span id="score">Điểm: 0</span>
-  <span id="lives">Mạng: ❤️❤️❤️❤️</span>
+  <span id="lives">Mạng: 4/4</span>
   <span id="size">Kích thước: 18</span>
 </div>
 
 <canvas id="game" width="900" height="520"></canvas>
-
 <button onclick="restart()">🔄 Chơi lại</button>
 <p>Dùng WASD, phím mũi tên hoặc nhấn chuột vào vị trí muốn bơi.</p>
 
@@ -65,7 +64,7 @@ p { margin: 8px; }
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-let p, fish, mines, keys, score, world;
+let p, fish, mines, purpleFish, keys, score, world;
 let hitLock, lastTime, raf, gameOver;
 let pointer = null;
 let explosions = [];
@@ -95,7 +94,19 @@ function addMine(x) {
   });
 }
 
-// Tạo hiệu ứng nổ
+// Tạo cá khổng lồ màu tím
+function addPurpleFish(x) {
+  purpleFish.push({
+    x: x,
+    y: rand(100, 380),
+    r: 48,
+    speed: rand(0.8, 1.4),
+    phase: rand(0, 6.28),
+    direction: Math.random() < 0.5 ? 1 : -1
+  });
+}
+
+// Hiệu ứng nổ
 function createExplosion(x, y) {
   let particles = [];
 
@@ -104,8 +115,7 @@ function createExplosion(x, y) {
     let speed = rand(2, 7);
 
     particles.push({
-      x: x,
-      y: y,
+      x, y,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
       size: rand(3, 7),
@@ -114,15 +124,13 @@ function createExplosion(x, y) {
   }
 
   explosions.push({
-    x: x,
-    y: y,
+    x, y,
     radius: 5,
     life: 1,
-    particles: particles
+    particles
   });
 }
 
-// Vẽ hiệu ứng nổ
 function drawExplosions(dt) {
   for (let i = explosions.length - 1; i >= 0; i--) {
     let ex = explosions[i];
@@ -133,14 +141,12 @@ function drawExplosions(dt) {
     ctx.save();
     ctx.globalAlpha = Math.max(0, ex.life);
 
-    // Vòng tròn nổ
     ctx.beginPath();
     ctx.arc(ex.x, ex.y, ex.radius, 0, Math.PI * 2);
     ctx.strokeStyle = "#ffcc33";
     ctx.lineWidth = 6;
     ctx.stroke();
 
-    // Ánh sáng trung tâm
     let glow = ctx.createRadialGradient(
       ex.x, ex.y, 2,
       ex.x, ex.y, ex.radius
@@ -154,7 +160,6 @@ function drawExplosions(dt) {
     ctx.arc(ex.x, ex.y, ex.radius, 0, Math.PI * 2);
     ctx.fill();
 
-    // Các tia lửa
     for (let particle of ex.particles) {
       particle.x += particle.vx * dt;
       particle.y += particle.vy * dt;
@@ -162,23 +167,18 @@ function drawExplosions(dt) {
 
       ctx.globalAlpha = Math.max(0, particle.life) * ex.life;
       ctx.fillStyle = Math.random() > 0.5 ? "#ffcc22" : "#ff5522";
-
       ctx.beginPath();
       ctx.arc(
-        particle.x,
-        particle.y,
+        particle.x, particle.y,
         particle.size * Math.max(0, particle.life),
-        0,
-        Math.PI * 2
+        0, Math.PI * 2
       );
       ctx.fill();
     }
 
     ctx.restore();
 
-    if (ex.life <= 0) {
-      explosions.splice(i, 1);
-    }
+    if (ex.life <= 0) explosions.splice(i, 1);
   }
 }
 
@@ -186,16 +186,13 @@ function restart() {
   if (raf) cancelAnimationFrame(raf);
 
   p = {
-    x: 250,
-    y: 250,
-    r: 18,
-    angle: 0,
-    speed: 3.5,
-    lives: 4
+    x: 250, y: 250, r: 18,
+    angle: 0, speed: 3.5, lives: 4
   };
 
   fish = [];
   mines = [];
+  purpleFish = [];
   keys = {};
   score = 0;
   world = 0;
@@ -205,12 +202,12 @@ function restart() {
   explosions = [];
   lastTime = 0;
 
-  for (let i = 0; i < 35; i++) {
-    addFish(350 + i * 100);
-  }
+  for (let i = 0; i < 35; i++) addFish(350 + i * 100);
+  for (let i = 0; i < 15; i++) addMine(700 + i * 350);
 
-  for (let i = 0; i < 15; i++) {
-    addMine(700 + i * 350);
+  // Có 5 cá tím khổng lồ
+  for (let i = 0; i < 5; i++) {
+    addPurpleFish(1200 + i * 1500);
   }
 
   updateInfo();
@@ -219,13 +216,11 @@ function restart() {
 
 function updateInfo() {
   document.getElementById("score").textContent = "Điểm: " + score;
-  document.getElementById("lives").textContent =
-    "Mạng: " + "❤️".repeat(p ? p.lives : 4);
+  document.getElementById("lives").textContent = "Mạng: " + p.lives + "/4";
   document.getElementById("size").textContent =
-    "Kích thước: " + (p ? Math.round(p.r) : 18);
+    "Kích thước: " + Math.round(p.r);
 }
 
-// Vẽ nền biển
 function background(t) {
   let g = ctx.createLinearGradient(0, 0, 0, 520);
   g.addColorStop(0, "#087eae");
@@ -233,7 +228,6 @@ function background(t) {
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 900, 520);
 
-  // Bong bóng
   for (let i = 0; i < 24; i++) {
     let x = (i * 83 + t * 0.015) % 900;
     let y = 470 - ((t * 0.035 + i * 37) % 500);
@@ -244,7 +238,6 @@ function background(t) {
     ctx.stroke();
   }
 
-  // Cát dưới đáy
   ctx.fillStyle = "#d8bd72";
   ctx.fillRect(0, 475, 900, 45);
 
@@ -252,39 +245,31 @@ function background(t) {
   for (let i = 0; i < 30; i++) {
     let x = (i * 37 - world * 1.2) % 900;
     if (x < 0) x += 900;
-
     ctx.beginPath();
     ctx.arc(x, 490 + (i % 3) * 8, 3, 0, 7);
     ctx.fill();
   }
 
-  // Rong biển
   for (let i = 0; i < 12; i++) {
     let x = (i * 95 - world * 0.5) % 950;
     if (x < -20) x += 950;
-
     ctx.strokeStyle = "#258b48";
     ctx.lineWidth = 7;
     ctx.beginPath();
     ctx.moveTo(x, 475);
-    ctx.quadraticCurveTo(
-      x - 20,
-      440,
-      x + Math.sin(t * .002 + i) * 18,
-      400
-    );
+    ctx.quadraticCurveTo(x - 20, 440,
+      x + Math.sin(t * .002 + i) * 18, 400);
     ctx.stroke();
   }
 }
 
-// Vẽ cá
+// Vẽ cá mập hoặc cá nhỏ
 function drawFish(f, player = false) {
   ctx.save();
   ctx.translate(f.x, f.y);
   ctx.rotate(player ? f.angle : 0);
 
   if (player) {
-    // Đuôi
     ctx.fillStyle = "#707b84";
     ctx.beginPath();
     ctx.moveTo(-f.r * .75, 0);
@@ -294,27 +279,17 @@ function drawFish(f, player = false) {
     ctx.closePath();
     ctx.fill();
 
-    // Thân cá mập
     ctx.fillStyle = "#929da5";
     ctx.beginPath();
     ctx.ellipse(0, 0, f.r * 1.45, f.r * .72, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Vây lưng
     ctx.beginPath();
     ctx.moveTo(-f.r * .1, -f.r * .55);
     ctx.lineTo(f.r * .25, -f.r * 1.25);
     ctx.lineTo(f.r * .65, -f.r * .5);
     ctx.fill();
 
-    // Vây dưới
-    ctx.beginPath();
-    ctx.moveTo(-f.r * .1, f.r * .5);
-    ctx.lineTo(f.r * .25, f.r * 1.05);
-    ctx.lineTo(f.r * .6, f.r * .5);
-    ctx.fill();
-
-    // Mắt
     ctx.fillStyle = "white";
     ctx.beginPath();
     ctx.arc(f.r * .85, -f.r * .22, Math.max(2, f.r * .12), 0, 7);
@@ -325,7 +300,6 @@ function drawFish(f, player = false) {
     ctx.arc(f.r * .9, -f.r * .22, Math.max(1, f.r * .06), 0, 7);
     ctx.fill();
 
-    // Miệng
     ctx.strokeStyle = "#333";
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -333,7 +307,6 @@ function drawFish(f, player = false) {
     ctx.lineTo(f.r * 1.25, f.r * .25);
     ctx.stroke();
 
-    // Răng
     ctx.fillStyle = "white";
     for (let i = 0; i < 3; i++) {
       let x = f.r * (0.94 + i * .1);
@@ -344,7 +317,6 @@ function drawFish(f, player = false) {
       ctx.fill();
     }
   } else {
-    // Đuôi cá nhỏ
     ctx.fillStyle = f.color;
     ctx.beginPath();
     ctx.moveTo(-f.r * .7, 0);
@@ -353,12 +325,10 @@ function drawFish(f, player = false) {
     ctx.closePath();
     ctx.fill();
 
-    // Thân cá nhỏ
     ctx.beginPath();
     ctx.ellipse(0, 0, f.r, f.r * .65, 0, 0, 7);
     ctx.fill();
 
-    // Mắt cá
     ctx.fillStyle = "white";
     ctx.beginPath();
     ctx.arc(f.r * .55, -f.r * .15, Math.max(1.5, f.r * .13), 0, 7);
@@ -373,7 +343,58 @@ function drawFish(f, player = false) {
   ctx.restore();
 }
 
-// Vẽ mìn
+// Vẽ cá tím khổng lồ
+function drawPurpleFish(f) {
+  ctx.save();
+  ctx.translate(f.x, f.y);
+
+  // Quay mặt theo hướng bơi
+  if (f.direction < 0) ctx.scale(-1, 1);
+
+  // Đuôi
+  ctx.fillStyle = "#8b35c9";
+  ctx.beginPath();
+  ctx.moveTo(-f.r * .65, 0);
+  ctx.lineTo(-f.r * 1.5, -f.r * .8);
+  ctx.lineTo(-f.r * 1.5, f.r * .8);
+  ctx.closePath();
+  ctx.fill();
+
+  // Thân
+  ctx.fillStyle = "#a855e8";
+  ctx.beginPath();
+  ctx.ellipse(0, 0, f.r, f.r * .68, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Vây trên
+  ctx.fillStyle = "#7835bd";
+  ctx.beginPath();
+  ctx.moveTo(-f.r * .2, -f.r * .55);
+  ctx.lineTo(f.r * .15, -f.r * 1.05);
+  ctx.lineTo(f.r * .5, -f.r * .5);
+  ctx.fill();
+
+  // Mắt
+  ctx.fillStyle = "white";
+  ctx.beginPath();
+  ctx.arc(f.r * .62, -f.r * .2, f.r * .13, 0, 7);
+  ctx.fill();
+
+  ctx.fillStyle = "#171027";
+  ctx.beginPath();
+  ctx.arc(f.r * .65, -f.r * .2, f.r * .07, 0, 7);
+  ctx.fill();
+
+  // Miệng
+  ctx.strokeStyle = "#45145f";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(f.r * .7, f.r * .18, f.r * .2, 0, Math.PI * .8);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
 function drawMine(m) {
   ctx.save();
   ctx.translate(m.x, m.y);
@@ -401,7 +422,6 @@ function drawMine(m) {
   ctx.restore();
 }
 
-// Vòng lặp game
 function loop(t) {
   if (!lastTime) lastTime = t;
   let dt = Math.min((t - lastTime) / 16.67, 2);
@@ -442,13 +462,11 @@ function loop(t) {
     p.y = Math.max(35, Math.min(465 - p.r, p.y));
 
     world += 1.5 * dt;
-
     if (hitLock > 0) hitLock -= dt;
 
-    // Cá nhỏ di chuyển và bị ăn
+    // Cá nhỏ
     for (let i = fish.length - 1; i >= 0; i--) {
       let f = fish[i];
-
       f.x -= f.speed * dt;
       f.y += Math.sin(t * .002 + f.phase) * .5 * dt;
 
@@ -466,7 +484,38 @@ function loop(t) {
       }
     }
 
-    // Mìn di chuyển và va chạm
+    // Cá tím khổng lồ
+    for (let i = purpleFish.length - 1; i >= 0; i--) {
+      let f = purpleFish[i];
+
+      f.x += f.speed * f.direction * dt;
+      f.y += Math.sin(t * .0015 + f.phase) * .6 * dt;
+
+      if (f.x < -100) {
+        f.direction = 1;
+        f.x = -90;
+      }
+      if (f.x > 1000) {
+        f.direction = -1;
+        f.x = 990;
+      }
+
+      let distance = Math.hypot(p.x - f.x, p.y - f.y);
+
+      if (distance < p.r * 1.2 + f.r * .7) {
+        if (p.r > f.r * 1.2) {
+          score += 50;
+          p.r = Math.min(p.r + 5, 65);
+          createExplosion(f.x, f.y);
+          purpleFish.splice(i, 1);
+          addPurpleFish(1100 + rand(0, 1500));
+        } else {
+          gameOver = true;
+        }
+      }
+    }
+
+    // Mìn
     for (let m of mines) {
       m.x -= m.speed * 1.5 * dt;
       m.y += Math.sin(t * .002 + m.phase) * 1.2 * dt;
@@ -478,15 +527,11 @@ function loop(t) {
 
       if (hitLock <= 0 &&
           Math.hypot(p.x - m.x, p.y - m.y) < p.r + m.r) {
-
-        // Tạo vụ nổ tại vị trí quả mìn
         createExplosion(m.x, m.y);
 
-        // Trừ một mạng
         p.lives--;
         hitLock = 60;
 
-        // Đưa mìn ra xa
         m.x = 950 + rand(100, 500);
         m.y = rand(70, 420);
 
@@ -498,23 +543,20 @@ function loop(t) {
     }
   }
 
-  // Vẽ cá nhỏ và mìn
   for (let f of fish) drawFish(f);
+  for (let f of purpleFish) drawPurpleFish(f);
   for (let m of mines) drawMine(m);
 
-  // Vẽ hiệu ứng nổ
   drawExplosions(dt);
 
-  // Cá mập nhấp nháy sau khi va chạm
   if (hitLock <= 0 || Math.floor(t / 100) % 2 === 0) {
     drawFish(p, true);
   }
 
   updateInfo();
 
-  // Màn hình kết thúc
   if (gameOver) {
-    ctx.fillStyle = "rgba(0,0,0,.65)";
+    ctx.fillStyle = "rgba(0,0,0,.7)";
     ctx.fillRect(0, 0, 900, 520);
 
     ctx.fillStyle = "white";
@@ -534,7 +576,7 @@ function loop(t) {
   raf = requestAnimationFrame(loop);
 }
 
-// Điều khiển bằng bàn phím
+// Điều khiển bàn phím
 window.addEventListener("keydown", e => {
   let k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
 
@@ -550,7 +592,7 @@ window.addEventListener("keyup", e => {
   keys[k] = false;
 });
 
-// Điều khiển bằng chuột hoặc cảm ứng
+// Điều khiển chuột và cảm ứng
 function getPointerPosition(e) {
   let rect = canvas.getBoundingClientRect();
 
@@ -574,7 +616,6 @@ canvas.addEventListener("pointerup", () => pointer = null);
 canvas.addEventListener("pointerleave", () => pointer = null);
 canvas.addEventListener("pointercancel", () => pointer = null);
 
-// Bắt đầu game
 restart();
 </script>
 </body>
