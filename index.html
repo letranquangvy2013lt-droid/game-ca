@@ -4,23 +4,45 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Đại Dương Phiêu Lưu</title>
+<title>Cá Lớn Nuốt Cá Bé</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;text-align:center;font-family:Arial;background:#063b68;color:white}
-h1{margin:12px;font-size:25px}
-#info{font-size:19px;font-weight:bold;padding:10px}
-canvas{display:block;width:96%;max-width:900px;height:auto;margin:auto;
-border:3px solid #8ceaff;border-radius:12px;touch-action:none}
-button{padding:12px 22px;margin:10px;border:0;border-radius:10px;
-background:#ffb703;color:#073451;font-weight:bold;font-size:17px}
+body{
+  margin:0;
+  background:#063b68;
+  color:white;
+  text-align:center;
+  font-family:Arial;
+}
+h1{margin:12px}
+#info{font-size:20px;font-weight:bold;padding:10px}
+canvas{
+  width:96%;
+  max-width:900px;
+  height:auto;
+  border:3px solid #8ceaff;
+  border-radius:12px;
+  touch-action:none;
+}
+button{
+  padding:12px 24px;
+  margin:12px;
+  border:0;
+  border-radius:10px;
+  background:#ffb703;
+  color:#073451;
+  font-size:17px;
+  font-weight:bold;
+  cursor:pointer;
+}
 </style>
 </head>
 <body>
-<h1>🐠 ĐẠI DƯƠNG PHIÊU LƯU 🌊</h1>
+
+<h1>🐠 CÁ LỚN NUỐT CÁ BÉ 🌊</h1>
 <div id="info">⭐ Điểm: 0 | 🐟 Kích thước: 1</div>
 <canvas id="game" width="900" height="520"></canvas>
-<p>Di chuyển: phím mũi tên hoặc WASD</p>
+<p>Di chuyển bằng phím mũi tên hoặc WASD</p>
 <p>🐟 Ăn cá nhỏ: +10 điểm | 💣 Chạm mìn: -5 điểm</p>
 <button onclick="restart()">🔄 Chơi lại</button>
 
@@ -28,81 +50,142 @@ background:#ffb703;color:#073451;font-weight:bold;font-size:17px}
 const c=document.getElementById("game");
 const ctx=c.getContext("2d");
 const info=document.getElementById("info");
+
 const W=900,H=520,FLOOR=435;
-let p,fish,mines,keys,score,world,gameOver,hitLock;
-let lastTime=0,raf=0;
+
+let p,fish,mines,keys,score,world;
+let gameOver,hitLock,raf,lastTime;
 
 function restart(){
   cancelAnimationFrame(raf);
-  p={x:250,y:260,r:18,angle:0};
-  fish=[];mines=[];keys={};score=0;world=0;
-  gameOver=false;hitLock=0;
-  for(let i=0;i<22;i++) addFish(150+i*85);
- for(let i=0;i<30;i++) addMine(400+i*120);
+
+  p={
+    x:250,y:250,r:18,
+    angle:0,speed:3.5
+  };
+
+  fish=[];
+  mines=[];
+  keys={};
+  score=0;
+  world=0;
+  gameOver=false;
+  hitLock=0;
+  lastTime=0;
+
+  for(let i=0;i<35;i++){
+    addFish(350+i*100);
+  }
+
+  // Tạo 30 quả mìn
+  for(let i=0;i<30;i++){
+    addMine(600+i*150);
+  }
+
   raf=requestAnimationFrame(loop);
 }
+
+// TẠO CÁ NHỎ
 function addFish(x){
   const r=8+Math.random()*10;
+
   fish.push({
     x:x+Math.random()*70,
-    y:100+Math.random()*280,
-    r,
-    color:["#ffd166","#ff70a6","#66e3ff","#b8f36b","#ff914d"][Math.floor(Math.random()*5)],
+    y:80+Math.random()*320,
+    r:r,
+    color:["#ffd166","#ff70a6","#66e3ff",
+           "#b8f36b","#ff914d"][Math.floor(Math.random()*5)],
     phase:Math.random()*6,
     speed:0.8+Math.random()*1.5
   });
+}
 
+// TẠO MÌN
 function addMine(x){
   mines.push({
-    x,
-    y:100+Math.random()*280,
+    x:x,
+    y:80+Math.random()*320,
     r:17,
     phase:Math.random()*6,
-    speed:0.6+Math.random()*0.8
+    speed:3+Math.random()*3
   });
 }
+
+// ĐIỀU KHIỂN
+document.addEventListener("keydown",e=>{
   const k=e.key.toLowerCase();
-  if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(k))e.preventDefault();
+  if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(k)){
+    e.preventDefault();
+  }
   keys[k]=true;
 });
-document.addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
 
+document.addEventListener("keyup",e=>{
+  keys[e.key.toLowerCase()]=false;
+});
+
+// ĐIỀU KHIỂN BẰNG CHUỘT
 let pointer=false;
-c.addEventListener("pointerdown",e=>{pointer=true;movePointer(e)});
-c.addEventListener("pointermove",e=>{if(pointer)movePointer(e)});
+
+c.addEventListener("pointerdown",e=>{
+  pointer=true;
+  movePointer(e);
+});
+
+c.addEventListener("pointermove",e=>{
+  if(pointer)movePointer(e);
+});
+
 c.addEventListener("pointerup",()=>pointer=false);
 c.addEventListener("pointercancel",()=>pointer=false);
+
 function movePointer(e){
-  const r=c.getBoundingClientRect();
-  p.x=(e.clientX-r.left)*W/r.width;
-  p.y=(e.clientY-r.top)*H/r.height;
-  p.x=Math.max(p.r,Math.min(W-p.r,p.x));
-  p.y=Math.max(p.r,Math.min(FLOOR-p.r,p.y));
+  const rect=c.getBoundingClientRect();
+  p.x=(e.clientX-rect.left)*W/rect.width;
+  p.y=(e.clientY-rect.top)*H/rect.height;
 }
 
+// VẼ CÁ
 function drawFish(f,player=false){
   ctx.save();
   ctx.translate(f.x,f.y);
   ctx.rotate(f.angle||0);
+
   ctx.fillStyle=player?"#ff963d":f.color;
+
   ctx.beginPath();
   ctx.ellipse(0,0,f.r*1.3,f.r*.8,0,0,Math.PI*2);
   ctx.fill();
+
+  // Đuôi
   ctx.beginPath();
   ctx.moveTo(-f.r,0);
   ctx.lineTo(-f.r*1.8,-f.r*.7);
   ctx.lineTo(-f.r*1.8,f.r*.7);
-  ctx.closePath();ctx.fill();
+  ctx.closePath();
+  ctx.fill();
+
+  // Mắt
   ctx.fillStyle="white";
-  ctx.beginPath();ctx.arc(f.r*.65,-f.r*.2,Math.max(2,f.r*.22),0,Math.PI*2);ctx.fill();
-  ctx.fillStyle="#102d46";
-  ctx.beginPath();ctx.arc(f.r*.72,-f.r*.2,Math.max(1,f.r*.1),0,Math.PI*2);ctx.fill();
+  ctx.beginPath();
+  ctx.arc(f.r*.65,-f.r*.2,Math.max(2,f.r*.22),0,Math.PI*2);
+  ctx.fill();
+
+  ctx.fillStyle="#123";
+  ctx.beginPath();
+  ctx.arc(f.r*.73,-f.r*.2,Math.max(1,f.r*.1),0,Math.PI*2);
+  ctx.fill();
+
   ctx.restore();
 }
 
+// VẼ MÌN
 function drawMine(m){
-  ctx.save();ctx.translate(m.x,m.y);
+  ctx.save();
+  ctx.translate(m.x,m.y);
+
   ctx.fillStyle="#ff665b";
+
   for(let i=0;i<10;i++){
     ctx.rotate(Math.PI/5);
     ctx.beginPath();
@@ -111,71 +194,105 @@ function drawMine(m){
     ctx.lineTo(m.r*.65,m.r*.35);
     ctx.fill();
   }
+
   ctx.fillStyle="#354d65";
-  ctx.strokeStyle="#a9c8dc";ctx.lineWidth=2;
-  ctx.beginPath();ctx.arc(0,0,m.r,0,Math.PI*2);ctx.fill();ctx.stroke();
-  ctx.fillStyle="#172c40";
-  ctx.beginPath();ctx.arc(0,0,5,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="#a9c8dc";
+  ctx.lineWidth=2;
+
+  ctx.beginPath();
+  ctx.arc(0,0,m.r,0,Math.PI*2);
+  ctx.fill();
+  ctx.stroke();
+
   ctx.restore();
 }
 
-function background(){
+// ĐÁY BIỂN VÀ CON ĐƯỜNG
+function background(t){
   let g=ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0,"#087eb8");g.addColorStop(1,"#02315c");
-  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  g.addColorStop(0,"#087eb8");
+  g.addColorStop(1,"#02315c");
 
-  for(let i=0;i<24;i++){
-    const x=(i*83-world*.25%W+W*2)%W;
-    const y=25+(i*67)%330;
-    ctx.fillStyle="rgba(180,245,255,.45)";
-    ctx.beginPath();ctx.arc(x,y,2+i%4,0,Math.PI*2);ctx.fill();
-  }
+  ctx.fillStyle=g;
+  ctx.fillRect(0,0,W,H);
 
-  // Đường đáy biển dài cuộn liên tục
-  ctx.fillStyle="#174c65";
-  ctx.beginPath();ctx.moveTo(0,FLOOR);
-  for(let x=0;x<=W;x+=20){
-    ctx.lineTo(x,FLOOR+Math.sin((x+world)*.025)*5);
-  }
-  ctx.lineTo(W,H);ctx.lineTo(0,H);ctx.fill();
+  // Bong bóng
+  for(let i=0;i<25;i++){
+    const x=(i*83-world*.4%(W+83)+W+83)%(W+83);
+    const y=(i*67+t*.015)%400;
 
-  ctx.fillStyle="#e5b75d";
-  ctx.fillRect(0,FLOOR,W,22);
-  ctx.fillStyle="#ffe09a";
-  ctx.fillRect(0,FLOOR,W,5);
-
-  // Đá và rong biển chạy dọc con đường
-  for(let i=0;i<24;i++){
-    const x=(i*79-world% (W+79)+W+79)%(W+79)-20;
-    ctx.fillStyle=i%2?"#607f8a":"#8ba2a3";
-    ctx.beginPath();ctx.ellipse(x,FLOOR+12,8+i%9,5,0,0,Math.PI*2);ctx.fill();
-
-    ctx.strokeStyle=i%2?"#29c99a":"#65d59c";
-    ctx.lineWidth=4;
-    ctx.beginPath();ctx.moveTo(x,FLOOR+3);
-    ctx.quadraticCurveTo(x-14,FLOOR-15,x-6,FLOOR-36-i%3*7);
-    ctx.moveTo(x,FLOOR+3);
-    ctx.quadraticCurveTo(x+13,FLOOR-16,x+5,FLOOR-30-i%4*6);
+    ctx.strokeStyle="rgba(180,245,255,.4)";
+    ctx.beginPath();
+    ctx.arc(x,y,3+i%4,0,Math.PI*2);
     ctx.stroke();
   }
 
-  // Các vạch trên con đường để thấy đường đang kéo dài
-  ctx.strokeStyle="rgba(255,255,255,.35)";
+  // Đáy biển
+  ctx.fillStyle="#174c65";
+  ctx.beginPath();
+  ctx.moveTo(0,FLOOR);
+
+  for(let x=0;x<=W;x+=20){
+    ctx.lineTo(x,FLOOR+Math.sin((x+world)*.025)*5);
+  }
+
+  ctx.lineTo(W,H);
+  ctx.lineTo(0,H);
+  ctx.fill();
+
+  // Con đường cát
+  ctx.fillStyle="#e5b75d";
+  ctx.fillRect(0,FLOOR,W,22);
+
+  ctx.fillStyle="#ffe09a";
+  ctx.fillRect(0,FLOOR,W,5);
+
+  // Rong biển
+  for(let i=0;i<25;i++){
+    const x=(i*79-world%(W+79)+W+79)%(W+79);
+
+    ctx.strokeStyle="#35d49b";
+    ctx.lineWidth=4;
+    ctx.beginPath();
+    ctx.moveTo(x,FLOOR+5);
+    ctx.quadraticCurveTo(
+      x-15,FLOOR-15,
+      x-5,FLOOR-40
+    );
+    ctx.moveTo(x,FLOOR+5);
+    ctx.quadraticCurveTo(
+      x+15,FLOOR-15,
+      x+5,FLOOR-35
+    );
+    ctx.stroke();
+  }
+
+  // Vạch đường
+  ctx.strokeStyle="rgba(255,255,255,.4)";
   ctx.lineWidth=2;
-  for(let i=0;i<18;i++){
-    const x=(i*65-world%(W+65)+W+65)%(W+65);
-    ctx.beginPath();ctx.moveTo(x,FLOOR+13);ctx.lineTo(x+28,FLOOR+13);ctx.stroke();
+
+  for(let i=0;i<20;i++){
+    let x=(i*65-world%(W+65)+W+65)%(W+65);
+    ctx.beginPath();
+    ctx.moveTo(x,FLOOR+13);
+    ctx.lineTo(x+28,FLOOR+13);
+    ctx.stroke();
   }
 }
 
+// GAME CHÍNH
 function loop(t){
-  const dt=lastTime?Math.min((t-lastTime)/16.67,2):1;
+  const dt=lastTime?
+    Math.min((t-lastTime)/16.67,2):1;
+
   lastTime=t;
-  background();
+
+  background(t);
 
   if(!gameOver){
-    const oldX=p.x,oldY=p.y;
+
     let dx=0,dy=0;
+
     if(keys.arrowleft||keys.a)dx--;
     if(keys.arrowright||keys.d)dx++;
     if(keys.arrowup||keys.w)dy--;
@@ -183,55 +300,102 @@ function loop(t){
 
     if(dx||dy){
       const len=Math.hypot(dx,dy);
-      dx/=len;dy/=len;
-      p.x+=dx*3.4*dt;p.y+=dy*3.4*dt;
-      p.angle=Math.atan2(dy,dx);
+      dx/=len;
+      dy/=len;
+
+      p.x+=dx*p.speed*dt;
+      p.y+=dy*p.speed*dt;
+
+      // Cá quay theo hướng di chuyển
+      if(dx>0)p.angle=0;
+      if(dx<0)p.angle=Math.PI;
+      if(dy<0)p.angle=-Math.PI/2;
+      if(dy>0)p.angle=Math.PI/2;
     }
 
     p.x=Math.max(p.r,Math.min(W-p.r,p.x));
     p.y=Math.max(p.r,Math.min(FLOOR-p.r,p.y));
 
-    // Cuộn thế giới để tạo cảm giác đường biển dài
-    world+=(p.x-oldX)*.65;
-    p.x=250;
+    world+=1.5*dt;
 
-    // Di chuyển cá và tạo cá mới phía trước
+    // CÁ NHỎ DI CHUYỂN
     for(let i=fish.length-1;i>=0;i--){
       const f=fish[i];
-      f.x-= (0.65+world*0)*dt;
-      f.y+=Math.sin(t*.002+f.phase)*.25*dt;
 
+      f.x-=f.speed*dt;
+      f.y+=Math.sin(t*.003+f.phase)*1.5*dt;
+
+      // Ăn cá nhỏ
       if(Math.hypot(p.x-f.x,p.y-f.y)<p.r+f.r*.65){
         if(p.r>=f.r){
           score+=10;
           p.r=Math.min(48,p.r+.7);
+
           fish.splice(i,1);
-          addFish(W+Math.random()*180);
+          addFish(W+Math.random()*250);
           continue;
         }
       }
-      if(f.x < -30){fish.splice(i,1);addFish(W+Math.random()*250);}
+
+      if(f.x < -30){
+        fish.splice(i,1);
+        addFish(W+Math.random()*250);
+      }
     }
 
-    // Mìn làm mất điểm, có thời gian chờ để không trừ liên tục
+    // MÌN DI CHUYỂN NHANH
     hitLock=Math.max(0,hitLock-dt);
-   
-for(let m of mines){
-  // Mìn trôi sang trái và lên xuống
- m.x-=m.speed*1.5*dt;
-  m.y+=Math.sin(t*0.002+m.phase)*1.2*dt;
 
-  if(Math.hypot(p.x-m.x,p.y-m.y)<p.r+m.r && hitLock<=0){
-    score-=5;
-    hitLock=45;
-    m.x=W+200+Math.random()*300;
-    m.y=100+Math.random()*280;
-    m.phase=Math.random()*6;
+    for(let m of mines){
+
+      m.x-=m.speed*1.5*dt;
+      m.y+=Math.sin(t*.002+m.phase)*1.8*dt;
+
+      // Chạm mìn bị trừ 5 điểm
+      if(Math.hypot(p.x-m.x,p.y-m.y)<p.r+m.r && hitLock<=0){
+
+        score-=5;
+        hitLock=45;
+
+        m.x=W+200+Math.random()*300;
+        m.y=80+Math.random()*320;
+        m.phase=Math.random()*6;
+      }
+
+      // Mìn xuất hiện lại
+      if(m.x < -40){
+        m.x=W+200+Math.random()*400;
+        m.y=80+Math.random()*320;
+        m.phase=Math.random()*6;
+      }
+    }
   }
-speed:2+Math.random()*2
-  if(m.x < -40){
-    m.x=W+200+Math.random()*400;
-    m.y=100+Math.random()*280;
-    m.phase=Math.random()*6;
+
+  // VẼ CÁ VÀ MÌN
+  fish.forEach(f=>drawFish(f));
+  mines.forEach(m=>drawMine(m));
+  drawFish(p,true);
+
+  info.textContent=
+    "⭐ Điểm: "+score+
+    " | 🐟 Kích thước: "+(p.r/18).toFixed(1);
+
+  if(gameOver){
+    ctx.fillStyle="rgba(0,0,0,.7)";
+    ctx.fillRect(0,0,W,H);
+
+    ctx.fillStyle="white";
+    ctx.textAlign="center";
+    ctx.font="bold 42px Arial";
+    ctx.fillText("GAME OVER!",W/2,H/2);
+    ctx.font="24px Arial";
+    ctx.fillText("Điểm: "+score,W/2,H/2+45);
   }
+
+  raf=requestAnimationFrame(loop);
 }
+
+restart();
+</script>
+</body>
+</html>
