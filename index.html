@@ -35,10 +35,11 @@ button{
   <span id="score">Điểm: 0</span>
   <span id="lives">Mạng: 4/4</span>
   <span id="size">Kích thước: 18</span>
+  <span id="timer">Thời gian: 05:00</span>
 </div>
 <canvas id="game" width="900" height="520"></canvas>
 <button onclick="restart()">🔄 CHƠI LẠI</button>
-<p>Dùng WASD, phím mũi tên hoặc chạm vào nơi muốn bơi.</p>
+<p>Dùng WASD, phím mũi tên hoặc chạm vào nơi muốn bơi. Sống sót đủ 5 phút để chiến thắng!</p>
 
 <script>
 const canvas=document.getElementById("game");
@@ -48,6 +49,9 @@ let p,fish,mines,purpleFish,keys,score,world;
 let hitLock,gameOver,raf,lastTime;
 let pointer=null,bubbles=[],jellyfish=[],explosions=[];
 let animationTime=0;
+let timeLeft=300, victory=false;
+let fireworks=[], confetti=[], victoryStarted=false;
+let fireworkCooldown=0;
 
 const rand=(a,b)=>Math.random()*(b-a)+a;
 
@@ -365,18 +369,85 @@ function drawMine(m){
   ctx.restore();
 }
 
+function launchFirework(){
+  const x=rand(100,800), y=rand(70,280);
+  const colors=["#ff3333","#ffff33","#33ddff","#ff66dd","#66ff88","#ffffff"];
+  const color=colors[Math.floor(rand(0,colors.length))];
+  for(let i=0;i<48;i++){
+    const a=Math.random()*Math.PI*2, speed=rand(2,6);
+    fireworks.push({
+      x,y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,
+      life:1,color,size:rand(2,4)
+    });
+  }
+}
+
+function createConfetti(){
+  const colors=["#ff3333","#ffff33","#33ddff","#ff66dd","#66ff88","#ffffff"];
+  for(let i=0;i<120;i++){
+    confetti.push({
+      x:rand(0,900),y:rand(-520,0),speed:rand(1,4),
+      size:rand(4,9),color:colors[Math.floor(rand(0,colors.length))],
+      rotation:rand(0,7)
+    });
+  }
+}
+
+function drawVictoryEffects(dt){
+  fireworkCooldown-=dt;
+  if(fireworkCooldown<=0){
+    launchFirework();
+    fireworkCooldown=28;
+  }
+
+  for(let i=fireworks.length-1;i>=0;i--){
+    const f=fireworks[i];
+    f.x+=f.vx*dt;
+    f.y+=f.vy*dt;
+    f.vy+=.04*dt;
+    f.life-=.018*dt;
+    ctx.globalAlpha=Math.max(0,f.life);
+    ctx.fillStyle=f.color;
+    ctx.beginPath();
+    ctx.arc(f.x,f.y,f.size,0,Math.PI*2);
+    ctx.fill();
+    if(f.life<=0)fireworks.splice(i,1);
+  }
+  ctx.globalAlpha=1;
+
+  for(const c of confetti){
+    c.y+=c.speed*dt;
+    c.x+=Math.sin(c.y*.03)*1.5*dt;
+    c.rotation+=.08*dt;
+    if(c.y>530){c.y=rand(-100,-10);c.x=rand(0,900);}
+    ctx.save();
+    ctx.translate(c.x,c.y);
+    ctx.rotate(c.rotation);
+    ctx.fillStyle=c.color;
+    ctx.fillRect(-c.size/2,-c.size/2,c.size,c.size);
+    ctx.restore();
+  }
+}
+
 function updateInfo(){
   document.getElementById("score").textContent="Điểm: "+score;
   document.getElementById("lives").textContent="Mạng: "+p.lives+"/4";
   document.getElementById("size").textContent=
     "Kích thước: "+Math.round(p.r);
+  const minutes=Math.floor(timeLeft/60);
+  const seconds=Math.floor(timeLeft%60);
+  document.getElementById("timer").textContent=
+    "Thời gian: "+String(minutes).padStart(2,"0")+":"+
+    String(seconds).padStart(2,"0");
 }
 
 function restart(){
   if(raf)cancelAnimationFrame(raf);
   p={x:250,y:250,r:18,angle:0,speed:3.5,lives:4};
   fish=[];mines=[];purpleFish=[];keys={};
-  score=0;world=0;hitLock=0;gameOver=false;
+  score=0;world=0;hitLock=0;gameOver=false;victory=false;
+  timeLeft=300;fireworks=[];confetti=[];victoryStarted=false;
+  fireworkCooldown=0;
   pointer=null;explosions=[];lastTime=0;animationTime=0;
 
   createBubbles();createJellyfish();
@@ -397,7 +468,15 @@ function loop(t){
   drawBubbles(dt);
   drawJellyfish(t,dt);
 
-  if(!gameOver){
+  if(!gameOver&&!victory){
+    timeLeft-=dt/60;
+    if(timeLeft<=0){
+      timeLeft=0;
+      victory=true;
+    }
+  }
+
+  if(!gameOver&&!victory){
     let dx=0,dy=0;
     if(keys.ArrowUp||keys.w)dy--;
     if(keys.ArrowDown||keys.s)dy++;
@@ -489,17 +568,29 @@ function loop(t){
 
   updateInfo();
 
-  if(gameOver){
+  if(victory){
+    if(!victoryStarted){
+      victoryStarted=true;
+      createConfetti();
+      for(let i=0;i<5;i++)launchFirework();
+    }
+    drawVictoryEffects(dt);
+  }
+
+  if(gameOver||victory){
     ctx.fillStyle="rgba(0,0,0,.7)";
     ctx.fillRect(0,0,900,520);
     ctx.textAlign="center";
     ctx.fillStyle="white";
     ctx.font="bold 52px Arial";
-    ctx.fillText("GAME OVER!",450,230);
+    ctx.fillText(victory?"🏆 CHIẾN THẮNG! 🏆":"GAME OVER!",450,230);
     ctx.font="bold 25px Arial";
     ctx.fillText("Điểm của bạn: "+score,450,280);
     ctx.font="20px Arial";
-    ctx.fillText("Nhấn CHƠI LẠI để tiếp tục",450,325);
+    ctx.fillText(
+      victory?"Bạn đã sống sót trong 5 phút!":"Nhấn CHƠI LẠI để tiếp tục",
+      450,325
+    );
     ctx.textAlign="left";
   }
 
