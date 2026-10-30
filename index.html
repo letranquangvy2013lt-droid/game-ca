@@ -3,402 +3,431 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Thế Giới Cá Mập</title>
 <style>
-*{box-sizing:border-box}
-body{
-  margin:0;
-  background:#063b68;
-  color:white;
-  text-align:center;
-  font-family:Arial,sans-serif;
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: #063b63;
+  color: white;
+  font-family: Arial, sans-serif;
+  text-align: center;
 }
-h1{margin:12px}
-#info{font-size:20px;font-weight:bold;padding:10px}
-canvas{
-  width:96%;
-  max-width:900px;
-  height:auto;
-  border:3px solid #8ceaff;
-  border-radius:12px;
-  touch-action:none;
+h1 { margin: 12px 0 6px; }
+#info {
+  display: flex;
+  justify-content: center;
+  gap: 25px;
+  flex-wrap: wrap;
+  font-size: 19px;
+  margin: 8px;
 }
-button{
-  padding:12px 24px;
-  margin:12px;
-  border:0;
-  border-radius:10px;
-  background:#ffb703;
-  color:#073451;
-  font-size:17px;
-  font-weight:bold;
+canvas {
+  display: block;
+  width: min(96vw, 900px);
+  height: auto;
+  margin: 10px auto;
+  border: 4px solid #b7e9ff;
+  border-radius: 12px;
+  background: #087eae;
+  touch-action: none;
 }
+button {
+  padding: 11px 24px;
+  border: 0;
+  border-radius: 10px;
+  background: #ffcf35;
+  font-size: 17px;
+  font-weight: bold;
+  cursor: pointer;
+  margin: 8px;
+}
+p { margin: 8px; }
 </style>
 </head>
 <body>
 
-<h1>🦈 THẾ GIỚI CÁ MẬP 🌊</h1>
-<div id="info">⭐ Điểm: 0 | 🦈 Kích thước: 1</div>
+<h1>🦈 THẾ GIỚI CÁ MẬP 🦈</h1>
+
+<div id="info">
+  <span id="score">Điểm: 0</span>
+  <span id="lives">Mạng: ❤️❤️❤️❤️</span>
+  <span id="size">Kích thước: 18</span>
+</div>
+
 <canvas id="game" width="900" height="520"></canvas>
-<p>Di chuyển bằng phím mũi tên hoặc WASD</p>
-<p>🐟 Ăn cá nhỏ: +10 điểm | 💣 Chạm mìn: -5 điểm</p>
+
 <button onclick="restart()">🔄 Chơi lại</button>
+<p>Dùng WASD hoặc phím mũi tên để điều khiển cá mập.</p>
 
 <script>
-const c=document.getElementById("game");
-const ctx=c.getContext("2d");
-const info=document.getElementById("info");
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-const W=900,H=520,FLOOR=435;
+let p, fish, mines, keys, score, world;
+let hitLock, lastTime, raf, gameOver;
+let pointer = null;
 
-let p,fish,mines,keys,score,world;
-let hitLock,raf,lastTime;
-
-function restart(){
-  cancelAnimationFrame(raf);
-
-  p={x:250,y:250,r:18,angle:0,speed:3.5};
-  fish=[];
-  mines=[];
-  keys={};
-  score=0;
-  world=0;
-  hitLock=0;
-  lastTime=0;
-
-  for(let i=0;i<35;i++)addFish(350+i*100);
-  for(let i=0;i<15;i++)addMine(600+i*250);
-
-  raf=requestAnimationFrame(loop);
+function rand(min, max) {
+  return Math.random() * (max - min) + min;
 }
 
-// TẠO CÁ NHỎ
-function addFish(x){
-  const r=8+Math.random()*10;
-
+function addFish(x) {
   fish.push({
-    x:x+Math.random()*70,
-    y:80+Math.random()*320,
-    r,
-    color:["#ffd166","#ff70a6","#66e3ff",
-    "#b8f36b","#ff914d"][Math.floor(Math.random()*5)],
-    phase:Math.random()*6,
-    speed:0.8+Math.random()*1.5
+    x: x,
+    y: rand(60, 390),
+    r: rand(8, 16),
+    speed: rand(0.7, 1.8),
+    phase: rand(0, 6.28),
+    color: ["#ffb347", "#ff79a8", "#8ce36b", "#ffe66d"][Math.floor(rand(0,4))]
   });
 }
 
-// TẠO MÌN
-function addMine(x){
+function addMine(x) {
   mines.push({
-    x,
-    y:80+Math.random()*320,
-    r:17,
-    phase:Math.random()*6,
-    speed:3+Math.random()*3
+    x: x,
+    y: rand(80, 390),
+    r: 17,
+    speed: rand(2, 3.5),
+    phase: rand(0, 6.28)
   });
 }
 
-// ĐIỀU KHIỂN
-document.addEventListener("keydown",e=>{
-  let k=e.key.toLowerCase();
-  if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(k))e.preventDefault();
-  keys[k]=true;
-});
-document.addEventListener("keyup",e=>{
-  keys[e.key.toLowerCase()]=false;
-});
+function restart() {
+  if (raf) cancelAnimationFrame(raf);
 
-// ĐIỀU KHIỂN BẰNG CHUỘT
-let pointer=false;
-c.addEventListener("pointerdown",e=>{
-  pointer=true;
-  movePointer(e);
-});
-c.addEventListener("pointermove",e=>{
-  if(pointer)movePointer(e);
-});
-c.addEventListener("pointerup",()=>pointer=false);
-c.addEventListener("pointercancel",()=>pointer=false);
+  p = { x: 250, y: 250, r: 18, angle: 0, speed: 3.5 };
+  fish = [];
+  mines = [];
+  keys = {};
+  score = 0;
+  world = 0;
+  hitLock = 0;
+  gameOver = false;
+  pointer = null;
+  lastTime = 0;
 
-function movePointer(e){
-  const rect=c.getBoundingClientRect();
-  p.x=(e.clientX-rect.left)*W/rect.width;
-  p.y=(e.clientY-rect.top)*H/rect.height;
+  for (let i = 0; i < 35; i++) addFish(350 + i * 100);
+  for (let i = 0; i < 15; i++) addMine(700 + i * 350);
+
+  updateInfo();
+  raf = requestAnimationFrame(loop);
 }
 
-// VẼ CÁ
-function drawFish(f,player=false){
-  ctx.save();
-  ctx.translate(f.x,f.y);
-  ctx.rotate(f.angle||0);
+function updateInfo() {
+  document.getElementById("score").textContent = "Điểm: " + score;
+  document.getElementById("lives").textContent =
+    "Mạng: " + "❤️".repeat(Math.max(0, p ? p.lives : 4));
+  document.getElementById("size").textContent =
+    "Kích thước: " + (p ? Math.round(p.r) : 18);
+}
 
-  if(!player){
-    ctx.fillStyle=f.color;
+function background(t) {
+  let g = ctx.createLinearGradient(0, 0, 0, 520);
+  g.addColorStop(0, "#087eae");
+  g.addColorStop(1, "#003b68");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 900, 520);
+
+  // Bong bóng
+  for (let i = 0; i < 24; i++) {
+    let x = (i * 83 + t * 0.015) % 900;
+    let y = 470 - ((t * 0.035 + i * 37) % 500);
     ctx.beginPath();
-    ctx.ellipse(0,0,f.r*1.3,f.r*.8,0,0,Math.PI*2);
+    ctx.arc(x, y, 3 + (i % 4), 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(210,245,255,.5)";
+    ctx.stroke();
+  }
+
+  // Đáy biển và cát
+  ctx.fillStyle = "#d8bd72";
+  ctx.fillRect(0, 475, 900, 45);
+  ctx.fillStyle = "#bda052";
+  for (let i = 0; i < 30; i++) {
+    let x = (i * 37 - world * 1.2) % 900;
+    if (x < 0) x += 900;
+    ctx.beginPath();
+    ctx.arc(x, 490 + (i % 3) * 8, 3, 0, 7);
     ctx.fill();
+  }
 
+  // Rong biển
+  for (let i = 0; i < 12; i++) {
+    let x = (i * 95 - world * 0.5) % 950;
+    if (x < -20) x += 950;
+    ctx.strokeStyle = "#258b48";
+    ctx.lineWidth = 7;
     ctx.beginPath();
-    ctx.moveTo(-f.r,0);
-    ctx.lineTo(-f.r*1.8,-f.r*.7);
-    ctx.lineTo(-f.r*1.8,f.r*.7);
+    ctx.moveTo(x, 475);
+    ctx.quadraticCurveTo(x - 20, 440, x + Math.sin(t * .002 + i) * 18, 400);
+    ctx.stroke();
+  }
+}
+
+function drawFish(f, player = false) {
+  ctx.save();
+  ctx.translate(f.x, f.y);
+  ctx.rotate(player ? f.angle : 0);
+
+  if (player) {
+    // Đuôi cá mập
+    ctx.fillStyle = "#707b84";
+    ctx.beginPath();
+    ctx.moveTo(-f.r * .75, 0);
+    ctx.lineTo(-f.r * 1.8, -f.r * .9);
+    ctx.lineTo(-f.r * 1.55, 0);
+    ctx.lineTo(-f.r * 1.8, f.r * .9);
     ctx.closePath();
     ctx.fill();
 
-    ctx.fillStyle="white";
+    // Thân cá mập
+    ctx.fillStyle = "#929da5";
     ctx.beginPath();
-    ctx.arc(f.r*.65,-f.r*.2,Math.max(2,f.r*.22),0,Math.PI*2);
+    ctx.ellipse(0, 0, f.r * 1.45, f.r * .72, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle="#123";
+    // Vây lưng
     ctx.beginPath();
-    ctx.arc(f.r*.73,-f.r*.2,Math.max(1,f.r*.1),0,Math.PI*2);
+    ctx.moveTo(-f.r * .1, -f.r * .55);
+    ctx.lineTo(f.r * .25, -f.r * 1.25);
+    ctx.lineTo(f.r * .65, -f.r * .5);
     ctx.fill();
 
-    ctx.restore();
-    return;
-  }
-
-  // THÂN CÁ MẬP
-  const r=f.r;
-  ctx.fillStyle="#718b9b";
-
-  ctx.beginPath();
-  ctx.ellipse(0,0,r*1.5,r*.75,0,0,Math.PI*2);
-  ctx.fill();
-
-  // ĐUÔI
-  ctx.beginPath();
-  ctx.moveTo(-r*1.1,0);
-  ctx.lineTo(-r*2,-r*.9);
-  ctx.lineTo(-r*1.8,0);
-  ctx.lineTo(-r*2,r*.9);
-  ctx.closePath();
-  ctx.fill();
-
-  // VÂY LƯNG
-  ctx.beginPath();
-  ctx.moveTo(-r*.2,-r*.5);
-  ctx.lineTo(r*.2,-r*1.35);
-  ctx.lineTo(r*.8,-r*.5);
-  ctx.fill();
-
-  // VÂY DƯỚI
-  ctx.beginPath();
-  ctx.moveTo(-r*.3,r*.5);
-  ctx.lineTo(r*.1,r*1.1);
-  ctx.lineTo(r*.65,r*.5);
-  ctx.fill();
-
-  // MẮT
-  ctx.fillStyle="white";
-  ctx.beginPath();
-  ctx.arc(r*.9,-r*.2,r*.16,0,Math.PI*2);
-  ctx.fill();
-
-  ctx.fillStyle="#111";
-  ctx.beginPath();
-  ctx.arc(r*.94,-r*.2,r*.08,0,Math.PI*2);
-  ctx.fill();
-
-  // MIỆNG
-  ctx.fillStyle="#401d27";
-  ctx.beginPath();
-  ctx.moveTo(r*.65,r*.25);
-  ctx.lineTo(r*1.45,r*.3);
-  ctx.lineTo(r*1.1,r*.58);
-  ctx.closePath();
-  ctx.fill();
-
-  // RĂNG
-  ctx.fillStyle="white";
-  for(let i=0;i<4;i++){
-    const x=r*.78+i*r*.13;
+    // Vây dưới
     ctx.beginPath();
-    ctx.moveTo(x,r*.28);
-    ctx.lineTo(x+r*.06,r*.43);
-    ctx.lineTo(x+r*.12,r*.3);
+    ctx.moveTo(-f.r * .1, f.r * .5);
+    ctx.lineTo(f.r * .25, f.r * 1.05);
+    ctx.lineTo(f.r * .6, f.r * .5);
+    ctx.fill();
+
+    // Mắt
+    ctx.fillStyle = "white";
+    ctx.beginPath();
+    ctx.arc(f.r * .85, -f.r * .22, Math.max(2, f.r * .12), 0, 7);
+    ctx.fill();
+    ctx.fillStyle = "#111";
+    ctx.beginPath();
+    ctx.arc(f.r * .9, -f.r * .22, Math.max(1, f.r * .06), 0, 7);
+    ctx.fill();
+
+    // Miệng
+    ctx.strokeStyle = "#333";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(f.r * .95, f.r * .22);
+    ctx.lineTo(f.r * 1.25, f.r * .25);
+    ctx.stroke();
+
+    // Răng
+    ctx.fillStyle = "white";
+    for (let i = 0; i < 3; i++) {
+      let x = f.r * (0.94 + i * .1);
+      ctx.beginPath();
+      ctx.moveTo(x, f.r * .23);
+      ctx.lineTo(x + f.r * .07, f.r * .43);
+      ctx.lineTo(x + f.r * .13, f.r * .23);
+      ctx.fill();
+    }
+  } else {
+    // Cá nhỏ
+    ctx.fillStyle = f.color;
+    ctx.beginPath();
+    ctx.moveTo(-f.r * .7, 0);
+    ctx.lineTo(-f.r * 1.5, -f.r * .8);
+    ctx.lineTo(-f.r * 1.5, f.r * .8);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.ellipse(0, 0, f.r, f.r * .65, 0, 0, 7);
+    ctx.fill();
+
+    ctx.fillStyle = "white";
+    ctx.beginPath();
+    ctx.arc(f.r * .55, -f.r * .15, Math.max(1.5, f.r * .13), 0, 7);
+    ctx.fill();
+    ctx.fillStyle = "#111";
+    ctx.beginPath();
+    ctx.arc(f.r * .58, -f.r * .15, Math.max(1, f.r * .07), 0, 7);
     ctx.fill();
   }
-
   ctx.restore();
 }
 
-// VẼ MÌN
-function drawMine(m){
+function drawMine(m) {
   ctx.save();
-  ctx.translate(m.x,m.y);
-
-  ctx.fillStyle="#ff665b";
-  for(let i=0;i<10;i++){
-    ctx.rotate(Math.PI/5);
+  ctx.translate(m.x, m.y);
+  ctx.fillStyle = "#252d35";
+  for (let i = 0; i < 12; i++) {
+    ctx.rotate(Math.PI / 6);
     ctx.beginPath();
-    ctx.moveTo(m.r*.65,-m.r*.35);
-    ctx.lineTo(m.r*1.35,0);
-    ctx.lineTo(m.r*.65,m.r*.35);
+    ctx.moveTo(0, -m.r * .65);
+    ctx.lineTo(-5, -m.r * 1.35);
+    ctx.lineTo(5, -m.r * 1.35);
+    ctx.closePath();
     ctx.fill();
   }
-
-  ctx.fillStyle="#354d65";
-  ctx.strokeStyle="#a9c8dc";
-  ctx.lineWidth=2;
   ctx.beginPath();
-  ctx.arc(0,0,m.r,0,Math.PI*2);
+  ctx.arc(0, 0, m.r, 0, 7);
   ctx.fill();
-  ctx.stroke();
-
+  ctx.fillStyle = "#e5e5e5";
+  ctx.beginPath();
+  ctx.arc(-5, -5, 4, 0, 7);
+  ctx.fill();
   ctx.restore();
 }
 
-// ĐÁY BIỂN VÀ CON ĐƯỜNG DÀI
-function background(t){
-  let g=ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0,"#087eb8");
-  g.addColorStop(1,"#02315c");
-  ctx.fillStyle=g;
-  ctx.fillRect(0,0,W,H);
-
-  // BONG BÓNG
-  for(let i=0;i<25;i++){
-    const x=(i*83-world*.4%(W+83)+W+83)%(W+83);
-    const y=(i*67+t*.015)%400;
-    ctx.strokeStyle="rgba(180,245,255,.4)";
-    ctx.beginPath();
-    ctx.arc(x,y,3+i%4,0,Math.PI*2);
-    ctx.stroke();
-  }
-
-  // ĐẤT ĐÁY BIỂN
-  ctx.fillStyle="#174c65";
-  ctx.beginPath();
-  ctx.moveTo(0,FLOOR);
-  for(let x=0;x<=W;x+=20){
-    ctx.lineTo(x,FLOOR+Math.sin((x+world)*.025)*5);
-  }
-  ctx.lineTo(W,H);
-  ctx.lineTo(0,H);
-  ctx.fill();
-
-  // ĐƯỜNG CÁT
-  ctx.fillStyle="#e5b75d";
-  ctx.fillRect(0,FLOOR,W,22);
-  ctx.fillStyle="#ffe09a";
-  ctx.fillRect(0,FLOOR,W,5);
-
-  // RONG BIỂN
-  for(let i=0;i<25;i++){
-    const x=(i*79-world%(W+79)+W+79)%(W+79);
-    ctx.strokeStyle="#35d49b";
-    ctx.lineWidth=4;
-    ctx.beginPath();
-    ctx.moveTo(x,FLOOR+5);
-    ctx.quadraticCurveTo(x-15,FLOOR-15,x-5,FLOOR-40);
-    ctx.moveTo(x,FLOOR+5);
-    ctx.quadraticCurveTo(x+15,FLOOR-15,x+5,FLOOR-35);
-    ctx.stroke();
-  }
-
-  // VẠCH ĐƯỜNG
-  ctx.strokeStyle="rgba(255,255,255,.4)";
-  ctx.lineWidth=2;
-  for(let i=0;i<20;i++){
-    let x=(i*65-world%(W+65)+W+65)%(W+65);
-    ctx.beginPath();
-    ctx.moveTo(x,FLOOR+13);
-    ctx.lineTo(x+28,FLOOR+13);
-    ctx.stroke();
-  }
-}
-
-// VÒNG LẶP GAME
-function loop(t){
-  const dt=lastTime?Math.min((t-lastTime)/16.67,2):1;
-  lastTime=t;
+function loop(t) {
+  if (!lastTime) lastTime = t;
+  let dt = Math.min((t - lastTime) / 16.67, 2);
+  lastTime = t;
 
   background(t);
 
-  if(!gameOver){
+  if (!gameOver) {
+    let dx = 0, dy = 0;
 
-    let dx=0,dy=0;
-    if(keys.arrowleft||keys.a)dx--;
-    if(keys.arrowright||keys.d)dx++;
-    if(keys.arrowup||keys.w)dy--;
-    if(keys.arrowdown||keys.s)dy++;
+    if (keys["ArrowUp"] || keys["w"]) dy--;
+    if (keys["ArrowDown"] || keys["s"]) dy++;
+    if (keys["ArrowLeft"] || keys["a"]) dx--;
+    if (keys["ArrowRight"] || keys["d"]) dx++;
 
-    if(dx||dy){
-      const len=Math.hypot(dx,dy);
-      dx/=len;
-      dy/=len;
-
-      p.x+=dx*p.speed*dt;
-      p.y+=dy*p.speed*dt;
-
-      if(dx>0)p.angle=0;
-      if(dx<0)p.angle=Math.PI;
-      if(dy<0)p.angle=-Math.PI/2;
-      if(dy>0)p.angle=Math.PI/2;
+    if (pointer) {
+      let px = pointer.x - p.x;
+      let py = pointer.y - p.y;
+      let distance = Math.hypot(px, py);
+      if (distance > 8) {
+        dx = px / distance;
+        dy = py / distance;
+      }
     }
 
-    p.x=Math.max(p.r,Math.min(W-p.r,p.x));
-    p.y=Math.max(p.r,Math.min(FLOOR-p.r,p.y));
+    if (dx || dy) {
+      let length = Math.hypot(dx, dy);
+      dx /= length;
+      dy /= length;
+      p.x += dx * p.speed * dt;
+      p.y += dy * p.speed * dt;
 
-    world+=1.5*dt;
+      p.angle = Math.atan2(dy, dx);
+    }
 
-    // CÁ NHỎ BƠI
-    for(let i=fish.length-1;i>=0;i--){
-      const f=fish[i];
-      f.x-=f.speed*dt;
-      f.y+=Math.sin(t*.003+f.phase)*1.5*dt;
+    p.x = Math.max(p.r * 1.5, Math.min(900 - p.r * 1.5, p.x));
+    p.y = Math.max(35, Math.min(465 - p.r, p.y));
 
-      if(Math.hypot(p.x-f.x,p.y-f.y)<p.r+f.r*.65){
-        if(p.r>=f.r){
-          score+=10;
-          p.r=Math.min(48,p.r+.7);
-          fish.splice(i,1);
-          addFish(W+Math.random()*250);
-          continue;
+    world += 1.5 * dt;
+    if (hitLock > 0) hitLock -= dt;
+
+    // Cá nhỏ di chuyển
+    for (let i = fish.length - 1; i >= 0; i--) {
+      let f = fish[i];
+      f.x -= f.speed * dt;
+      f.y += Math.sin(t * .002 + f.phase) * .5 * dt;
+
+      if (f.x < -30) {
+        f.x = 950 + rand(0, 300);
+        f.y = rand(60, 420);
+      }
+
+      if (p.r >= f.r * 1.05 &&
+          Math.hypot(p.x - f.x, p.y - f.y) < p.r + f.r * .65) {
+        score += 10;
+        p.r = Math.min(p.r + .7, 65);
+        fish.splice(i, 1);
+        addFish(950 + rand(0, 500));
+      }
+    }
+
+    // Mìn di chuyển và va chạm
+    for (let m of mines) {
+      m.x -= m.speed * 1.5 * dt;
+      m.y += Math.sin(t * .002 + m.phase) * 1.2 * dt;
+
+      if (m.x < -40) {
+        m.x = 950 + rand(100, 500);
+        m.y = rand(70, 420);
+      }
+
+      if (hitLock <= 0 &&
+          Math.hypot(p.x - m.x, p.y - m.y) < p.r + m.r) {
+        p.lives--;
+        hitLock = 60;
+
+        // Đưa quả mìn ra xa để không va chạm liên tục
+        m.x = 950 + rand(100, 500);
+        m.y = rand(70, 420);
+
+        if (p.lives <= 0) {
+          p.lives = 0;
+          gameOver = true;
         }
-      }
-
-      if(f.x < -30){
-        fish.splice(i,1);
-        addFish(W+Math.random()*250);
-      }
-    }
-
-    // MÌN BƠI NHANH
-    hitLock=Math.max(0,hitLock-dt);
-
-    for(let m of mines){
-      m.x-=m.speed*1.5*dt;
-      m.y+=Math.sin(t*.002+m.phase)*1.8*dt;
-
-      if(Math.hypot(p.x-m.x,p.y-m.y)<p.r+m.r && hitLock<=0){
-        score-=5;
-        hitLock=45;
-        m.x=W+200+Math.random()*300;
-        m.y=80+Math.random()*320;
-        m.phase=Math.random()*6;
-      }
-
-      if(m.x < -40){
-        m.x=W+200+Math.random()*400;
-        m.y=80+Math.random()*320;
-        m.phase=Math.random()*6;
       }
     }
   }
 
-  fish.forEach(f=>drawFish(f));
-  mines.forEach(m=>drawMine(m));
-  drawFish(p,true);
+  // Vẽ cá và mìn
+  for (let f of fish) drawFish(f);
+  for (let m of mines) drawMine(m);
 
-  info.textContent="⭐ Điểm: "+score+
-  " | 🦈 Kích thước: "+(p.r/18).toFixed(1);
+  // Nhấp nháy cá mập trong thời gian vừa bị chạm mìn
+  if (hitLock <= 0 || Math.floor(t / 100) % 2 === 0) {
+    drawFish(p, true);
+  }
 
-  raf=requestAnimationFrame(loop);
+  updateInfo();
+
+  if (gameOver) {
+    ctx.fillStyle = "rgba(0,0,0,.65)";
+    ctx.fillRect(0, 0, 900, 520);
+    ctx.fillStyle = "white";
+    ctx.textAlign = "center";
+    ctx.font = "bold 52px Arial";
+    ctx.fillText("GAME OVER!", 450, 230);
+    ctx.font = "bold 25px Arial";
+    ctx.fillText("Điểm của bạn: " + score, 450, 280);
+    ctx.font = "20px Arial";
+    ctx.fillText("Nhấn nút CHƠI LẠI để tiếp tục", 450, 325);
+    ctx.textAlign = "left";
+  }
+
+  raf = requestAnimationFrame(loop);
 }
+
+// Bàn phím
+window.addEventListener("keydown", e => {
+  let k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(k)) {
+    e.preventDefault();
+  }
+  keys[k] = true;
+});
+
+window.addEventListener("keyup", e => {
+  let k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  keys[k] = false;
+});
+
+// Điều khiển bằng chuột hoặc cảm ứng
+function getPointerPosition(e) {
+  let rect = canvas.getBoundingClientRect();
+  return {
+    x: (e.clientX - rect.left) * canvas.width / rect.width,
+    y: (e.clientY - rect.top) * canvas.height / rect.height
+  };
+}
+
+canvas.addEventListener("pointerdown", e => {
+  pointer = getPointerPosition(e);
+});
+canvas.addEventListener("pointermove", e => {
+  if (e.buttons || e.pointerType === "touch") {
+    pointer = getPointerPosition(e);
+  }
+});
+canvas.addEventListener("pointerup", () => pointer = null);
+canvas.addEventListener("pointerleave", () => pointer = null);
+canvas.addEventListener("pointercancel", () => pointer = null);
 
 restart();
 </script>
