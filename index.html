@@ -4,9 +4,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Thế Giới Cá Mập</title>
+<title>Thế Giới Cá Mập - Đại Dương Nhiệt Đới</title>
 <style>
 * { box-sizing: border-box; }
+
 body {
   margin: 0;
   background: #063b63;
@@ -14,15 +15,23 @@ body {
   font-family: Arial, sans-serif;
   text-align: center;
 }
-h1 { margin: 12px 0 6px; }
+
+h1 {
+  margin: 12px 0 6px;
+  color: #ffe77a;
+  text-shadow: 2px 3px 5px #00334d;
+}
+
 #info {
   display: flex;
   justify-content: center;
   gap: 25px;
   flex-wrap: wrap;
   font-size: 19px;
-  margin: 8px;
+  margin: 10px;
+  font-weight: bold;
 }
+
 canvas {
   display: block;
   width: min(96vw, 900px);
@@ -33,6 +42,7 @@ canvas {
   background: #087eae;
   touch-action: none;
 }
+
 button {
   padding: 11px 24px;
   border: 0;
@@ -43,9 +53,11 @@ button {
   cursor: pointer;
   margin: 8px;
 }
+
 p { margin: 8px; }
 </style>
 </head>
+
 <body>
 
 <h1>🦈 THẾ GIỚI CÁ MẬP 🦈</h1>
@@ -57,7 +69,9 @@ p { margin: 8px; }
 </div>
 
 <canvas id="game" width="900" height="520"></canvas>
-<button onclick="restart()">🔄 Chơi lại</button>
+
+<button onclick="restart()">🔄 CHƠI LẠI</button>
+
 <p>Dùng WASD, phím mũi tên hoặc nhấn chuột vào vị trí muốn bơi.</p>
 
 <script>
@@ -68,9 +82,40 @@ let p, fish, mines, purpleFish, keys, score, world;
 let hitLock, lastTime, raf, gameOver;
 let pointer = null;
 let explosions = [];
+let bubbles = [];
+let jellyfish = [];
 
 function rand(min, max) {
   return Math.random() * (max - min) + min;
+}
+
+// Khởi tạo bong bóng
+function createBubbles() {
+  bubbles = [];
+  for (let i = 0; i < 45; i++) {
+    bubbles.push({
+      x: rand(0, 900),
+      y: rand(0, 520),
+      r: rand(2, 7),
+      speed: rand(0.4, 1.5),
+      drift: rand(-0.3, 0.3)
+    });
+  }
+}
+
+// Khởi tạo sứa phát sáng
+function createJellyfish() {
+  jellyfish = [];
+  for (let i = 0; i < 7; i++) {
+    jellyfish.push({
+      x: rand(50, 850),
+      y: rand(80, 400),
+      r: rand(13, 23),
+      speed: rand(0.3, 0.8),
+      phase: rand(0, 6.28),
+      color: ["#ff8de2", "#8ceaff", "#d6a0ff", "#fff08c"][i % 4]
+    });
+  }
 }
 
 function addFish(x) {
@@ -94,7 +139,6 @@ function addMine(x) {
   });
 }
 
-// Tạo cá khổng lồ màu tím
 function addPurpleFish(x) {
   purpleFish.push({
     x: x,
@@ -151,6 +195,7 @@ function drawExplosions(dt) {
       ex.x, ex.y, 2,
       ex.x, ex.y, ex.radius
     );
+
     glow.addColorStop(0, "#ffffff");
     glow.addColorStop(0.35, "#ffdd33");
     glow.addColorStop(1, "rgba(255,60,0,0)");
@@ -167,6 +212,7 @@ function drawExplosions(dt) {
 
       ctx.globalAlpha = Math.max(0, particle.life) * ex.life;
       ctx.fillStyle = Math.random() > 0.5 ? "#ffcc22" : "#ff5522";
+
       ctx.beginPath();
       ctx.arc(
         particle.x, particle.y,
@@ -179,6 +225,108 @@ function drawExplosions(dt) {
     ctx.restore();
 
     if (ex.life <= 0) explosions.splice(i, 1);
+  }
+}
+
+// Vẽ ánh sáng dưới biển
+function drawSunlight(t) {
+  ctx.save();
+
+  for (let i = 0; i < 9; i++) {
+    let x = 40 + i * 110;
+    let sway = Math.sin(t * 0.0005 + i) * 25;
+
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x + 35 + sway, 390);
+    ctx.lineTo(x + 95 + sway, 390);
+    ctx.lineTo(x + 65, 0);
+    ctx.closePath();
+
+    ctx.fillStyle = "rgba(255, 245, 180, 0.055)";
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+// Vẽ bong bóng
+function drawBubbles(dt) {
+  for (let b of bubbles) {
+    b.y -= b.speed * dt;
+    b.x += Math.sin(b.y * 0.025) * b.drift * dt;
+
+    if (b.y < -10) {
+      b.y = 530;
+      b.x = rand(0, 900);
+    }
+
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(220,250,255,.65)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(b.x - b.r * .3, b.y - b.r * .3, b.r * .2, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255,255,255,.7)";
+    ctx.fill();
+  }
+}
+
+// Vẽ sứa
+function drawJellyfish(t, dt) {
+  for (let j of jellyfish) {
+    j.y += Math.sin(t * .001 + j.phase) * 0.5 * dt;
+    j.x += Math.sin(t * .0007 + j.phase) * 0.35 * dt;
+    j.y -= j.speed * 0.25 * dt;
+
+    if (j.y < -50) {
+      j.y = 550;
+      j.x = rand(50, 850);
+    }
+
+    ctx.save();
+    ctx.translate(j.x, j.y);
+
+    // Ánh sáng quanh sứa
+    ctx.shadowColor = j.color;
+    ctx.shadowBlur = 22;
+
+    // Thân sứa
+    ctx.fillStyle = j.color;
+    ctx.beginPath();
+    ctx.arc(0, 0, j.r, Math.PI, 0);
+    ctx.quadraticCurveTo(j.r, j.r * .8, 0, j.r * .55);
+    ctx.quadraticCurveTo(-j.r, j.r * .8, -j.r, 0);
+    ctx.fill();
+
+    // Xúc tu
+    ctx.shadowBlur = 8;
+    ctx.strokeStyle = j.color;
+    ctx.lineWidth = 2;
+
+    for (let i = -2; i <= 2; i++) {
+      ctx.beginPath();
+      ctx.moveTo(i * j.r * .28, j.r * .45);
+      ctx.quadraticCurveTo(
+        i * j.r * .3 + Math.sin(t * .004 + i) * 5,
+        j.r,
+        i * j.r * .35,
+        j.r * 1.5
+      );
+      ctx.stroke();
+    }
+
+    // Mắt
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#333";
+    ctx.beginPath();
+    ctx.arc(-j.r * .3, 0, 2, 0, 7);
+    ctx.arc(j.r * .3, 0, 2, 0, 7);
+    ctx.fill();
+
+    ctx.restore();
   }
 }
 
@@ -202,13 +350,12 @@ function restart() {
   explosions = [];
   lastTime = 0;
 
+  createBubbles();
+  createJellyfish();
+
   for (let i = 0; i < 35; i++) addFish(350 + i * 100);
   for (let i = 0; i < 15; i++) addMine(700 + i * 350);
-
-  // Có 5 cá tím khổng lồ
-  for (let i = 0; i < 5; i++) {
-    addPurpleFish(1200 + i * 1500);
-  }
+  for (let i = 0; i < 5; i++) addPurpleFish(1200 + i * 1500);
 
   updateInfo();
   raf = requestAnimationFrame(loop);
@@ -221,49 +368,73 @@ function updateInfo() {
     "Kích thước: " + Math.round(p.r);
 }
 
-function background(t) {
+// Phong cảnh đại dương nhiệt đới
+function background(t, dt) {
   let g = ctx.createLinearGradient(0, 0, 0, 520);
-  g.addColorStop(0, "#087eae");
+  g.addColorStop(0, "#24c5dc");
+  g.addColorStop(0.45, "#078fb6");
   g.addColorStop(1, "#003b68");
+
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 900, 520);
 
-  for (let i = 0; i < 24; i++) {
-    let x = (i * 83 + t * 0.015) % 900;
-    let y = 470 - ((t * 0.035 + i * 37) % 500);
+  drawSunlight(t);
 
-    ctx.beginPath();
-    ctx.arc(x, y, 3 + (i % 4), 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(210,245,255,.5)";
-    ctx.stroke();
-  }
-
-  ctx.fillStyle = "#d8bd72";
+  // Đáy cát
+  ctx.fillStyle = "#e6cb79";
   ctx.fillRect(0, 475, 900, 45);
 
-  ctx.fillStyle = "#bda052";
-  for (let i = 0; i < 30; i++) {
+  // Các vân cát
+  ctx.fillStyle = "#c9a957";
+  for (let i = 0; i < 35; i++) {
     let x = (i * 37 - world * 1.2) % 900;
     if (x < 0) x += 900;
+
     ctx.beginPath();
     ctx.arc(x, 490 + (i % 3) * 8, 3, 0, 7);
     ctx.fill();
   }
 
+  // Rong biển
   for (let i = 0; i < 12; i++) {
     let x = (i * 95 - world * 0.5) % 950;
     if (x < -20) x += 950;
-    ctx.strokeStyle = "#258b48";
+
+    ctx.strokeStyle = i % 2 ? "#168b59" : "#37a85d";
     ctx.lineWidth = 7;
     ctx.beginPath();
     ctx.moveTo(x, 475);
-    ctx.quadraticCurveTo(x - 20, 440,
-      x + Math.sin(t * .002 + i) * 18, 400);
+    ctx.quadraticCurveTo(
+      x - 20,
+      440,
+      x + Math.sin(t * .002 + i) * 18,
+      400
+    );
+    ctx.stroke();
+  }
+
+  // San hô màu sắc ở đáy
+  for (let i = 0; i < 8; i++) {
+    let x = (i * 125 - world * .35) % 1000;
+    if (x < -40) x += 1000;
+
+    ctx.strokeStyle = ["#ff8066", "#ff5ebc", "#f4a64a", "#a87ce8"][i % 4];
+    ctx.lineWidth = 6;
+    ctx.lineCap = "round";
+
+    ctx.beginPath();
+    ctx.moveTo(x, 475);
+    ctx.lineTo(x, 450);
+    ctx.lineTo(x - 12, 435);
+    ctx.moveTo(x, 450);
+    ctx.lineTo(x + 12, 430);
+    ctx.moveTo(x, 460);
+    ctx.lineTo(x + 18, 448);
     ctx.stroke();
   }
 }
 
-// Vẽ cá mập hoặc cá nhỏ
+// Vẽ cá mập và cá nhỏ
 function drawFish(f, player = false) {
   ctx.save();
   ctx.translate(f.x, f.y);
@@ -343,15 +514,13 @@ function drawFish(f, player = false) {
   ctx.restore();
 }
 
-// Vẽ cá tím khổng lồ
+// Cá tím khổng lồ
 function drawPurpleFish(f) {
   ctx.save();
   ctx.translate(f.x, f.y);
 
-  // Quay mặt theo hướng bơi
   if (f.direction < 0) ctx.scale(-1, 1);
 
-  // Đuôi
   ctx.fillStyle = "#8b35c9";
   ctx.beginPath();
   ctx.moveTo(-f.r * .65, 0);
@@ -360,13 +529,11 @@ function drawPurpleFish(f) {
   ctx.closePath();
   ctx.fill();
 
-  // Thân
   ctx.fillStyle = "#a855e8";
   ctx.beginPath();
   ctx.ellipse(0, 0, f.r, f.r * .68, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Vây trên
   ctx.fillStyle = "#7835bd";
   ctx.beginPath();
   ctx.moveTo(-f.r * .2, -f.r * .55);
@@ -374,7 +541,6 @@ function drawPurpleFish(f) {
   ctx.lineTo(f.r * .5, -f.r * .5);
   ctx.fill();
 
-  // Mắt
   ctx.fillStyle = "white";
   ctx.beginPath();
   ctx.arc(f.r * .62, -f.r * .2, f.r * .13, 0, 7);
@@ -385,7 +551,6 @@ function drawPurpleFish(f) {
   ctx.arc(f.r * .65, -f.r * .2, f.r * .07, 0, 7);
   ctx.fill();
 
-  // Miệng
   ctx.strokeStyle = "#45145f";
   ctx.lineWidth = 3;
   ctx.beginPath();
@@ -395,6 +560,7 @@ function drawPurpleFish(f) {
   ctx.restore();
 }
 
+// Mìn
 function drawMine(m) {
   ctx.save();
   ctx.translate(m.x, m.y);
@@ -424,10 +590,15 @@ function drawMine(m) {
 
 function loop(t) {
   if (!lastTime) lastTime = t;
+
   let dt = Math.min((t - lastTime) / 16.67, 2);
   lastTime = t;
 
-  background(t);
+  background(t, dt);
+
+  // Cảnh vẫn chuyển động kể cả khi kết thúc
+  drawBubbles(dt);
+  drawJellyfish(t, dt);
 
   if (!gameOver) {
     let dx = 0, dy = 0;
@@ -467,6 +638,7 @@ function loop(t) {
     // Cá nhỏ
     for (let i = fish.length - 1; i >= 0; i--) {
       let f = fish[i];
+
       f.x -= f.speed * dt;
       f.y += Math.sin(t * .002 + f.phase) * .5 * dt;
 
@@ -495,6 +667,7 @@ function loop(t) {
         f.direction = 1;
         f.x = -90;
       }
+
       if (f.x > 1000) {
         f.direction = -1;
         f.x = 990;
@@ -527,6 +700,7 @@ function loop(t) {
 
       if (hitLock <= 0 &&
           Math.hypot(p.x - m.x, p.y - m.y) < p.r + m.r) {
+
         createExplosion(m.x, m.y);
 
         p.lives--;
@@ -543,6 +717,7 @@ function loop(t) {
     }
   }
 
+  // Vẽ các nhân vật
   for (let f of fish) drawFish(f);
   for (let f of purpleFish) drawPurpleFish(f);
   for (let m of mines) drawMine(m);
@@ -616,6 +791,7 @@ canvas.addEventListener("pointerup", () => pointer = null);
 canvas.addEventListener("pointerleave", () => pointer = null);
 canvas.addEventListener("pointercancel", () => pointer = null);
 
+// Bắt đầu game
 restart();
 </script>
 </body>
