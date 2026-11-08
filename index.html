@@ -4,118 +4,290 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Thế Giới Cá Mập</title>
+<title>Đại Dương Kỳ Ảo 3D</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;text-align:center;font-family:Arial;color:white;background:#063b63}
-h1{color:#ffe77a;text-shadow:2px 3px 5px #00334d}
-#info{display:flex;justify-content:center;gap:22px;flex-wrap:wrap;font-size:18px;font-weight:bold;margin:12px}
-canvas{width:min(96vw,900px);height:auto;display:block;margin:10px auto;border:4px solid #b7e9ff;border-radius:12px;touch-action:none}
-button{padding:12px 25px;border:0;border-radius:10px;background:#ffcf35;font-size:17px;font-weight:bold;cursor:pointer;margin:4px}
-#lobbyScreen{position:fixed;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;overflow:hidden;background:linear-gradient(180deg,#031a39aa,#031a39dd)}
-#lobby3d{position:absolute;inset:0;z-index:0}
-#lobby3d canvas{width:100%!important;height:100%!important;display:block;margin:0;border:0;border-radius:0}
-.lobbyShade{position:absolute;inset:0;z-index:1;background:linear-gradient(90deg,#00162b88,#00162b22,#00162b88);pointer-events:none}
-.lobbyContent{position:relative;z-index:2;width:min(94%,780px);padding:24px;text-align:center}
-.lobbyTitle{font-size:clamp(35px,7vw,72px);font-weight:900;color:#c4f5ff;text-shadow:0 0 14px #00cfff,0 0 34px #087cbf;margin:0}
-.lobbySub{letter-spacing:5px;color:#e2faff;margin:10px 0 32px}
-.lobbyButtons{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}
-.lobbyButtons button{background:linear-gradient(135deg,#27d8ef,#1764b8);color:white;border:1px solid #a9f4ff;padding:14px 22px;min-width:145px;box-shadow:0 0 18px #00aaff66}
-.lobbyTagline{color:#d7f6ff;margin-top:25px}
-#lobbyInfo{display:none;position:fixed;inset:0;z-index:20;background:#00152bdd;align-items:center;justify-content:center;padding:20px}
-#lobbyInfo .infoCard{background:linear-gradient(145deg,#0b4770,#081c3d);border:1px solid #7ceaff;border-radius:18px;padding:26px;max-width:420px;width:100%;box-shadow:0 0 30px #00bfff66}
-#lobbyInfo h2{color:#9ceeff}
-#lobbyInfo p{line-height:1.6}
-#gameScreen{min-height:100vh;padding:1px 0 20px}
-@media(max-width:600px){.lobbyButtons{flex-direction:column;align-items:center}.lobbyButtons button{width:min(85%,300px)}}
+body{margin:0;overflow:hidden;background:#031b45;font-family:Arial}
+#scene{width:100vw;height:100vh}
+#title{
+ position:fixed;top:18px;left:0;width:100%;
+ text-align:center;color:#a8faff;
+ font-size:clamp(23px,5vw,42px);
+ font-weight:bold;text-shadow:0 0 15px #00dfff;
+ pointer-events:none;z-index:2;
+}
+#hint{
+ position:fixed;bottom:15px;left:0;width:100%;
+ text-align:center;color:white;font-size:14px;
+ pointer-events:none;
+}
 </style>
 </head>
 <body>
+<div id="title">🌊 ĐẠI DƯƠNG KỲ ẢO 🌊</div>
+<div id="scene"></div>
+<div id="hint">Khám phá hang động bí ẩn dưới đáy biển</div>
 
-<div id="lobbyScreen">
-  <div id="lobby3d"></div>
-  <div class="lobbyShade"></div>
-  <div class="lobbyContent">
-    <h1 class="lobbyTitle">🦈 THẾ GIỚI CÁ MẬP 🦈</h1>
-    <div class="lobbySub">FANTASY OCEAN · SẢNH CHỜ</div>
-    <div class="lobbyButtons">
-      <button onclick="enterGame()">▶ BẮT ĐẦU</button>
-      <button onclick="lobbyInfo('CỬA HÀNG','Cửa hàng sẽ được bổ sung trong phiên bản tiếp theo.')">CỬA HÀNG</button>
-      <button onclick="lobbyInfo('BỘ SƯU TẬP','Khám phá các loài cá và sinh vật trong đại dương.')">BỘ SƯU TẬP</button>
-      <button onclick="lobbyInfo('HƯỚNG DẪN','Dùng WASD, phím mũi tên hoặc chạm vào nơi muốn bơi. Ăn cá nhỏ để lớn lên, tránh cá tím khổng lồ và mìn. Sống sót đủ 5 phút để chiến thắng!')">HƯỚNG DẪN</button>
-    </div>
-    <p class="lobbyTagline">Khám phá đại dương · Sinh tồn · Trở thành cá mập lớn nhất</p>
-  </div>
-</div>
-
-<div id="lobbyInfo">
-  <div class="infoCard">
-    <h2 id="lobbyInfoTitle"></h2>
-    <p id="lobbyInfoText"></p>
-    <button onclick="closeLobbyInfo()">ĐÓNG</button>
-  </div>
-</div>
-
-<div id="gameScreen" style="display:none">
-<h1>🦈 THẾ GIỚI CÁ MẬP 🦈</h1>
-<div id="info">
-<span id="score">Điểm: 0</span>
-<span id="lives">Mạng: 4/4</span>
-<span id="size">Kích thước: 18</span>
-<span id="timer">Thời gian: 05:00</span>
-</div>
-<canvas id="game" width="900" height="520"></canvas>
-<button onclick="togglePause()" id="pauseButton">⏸️ TẠM DỪNG</button>
-<button onclick="restart()">🔄 CHƠI LẠI</button>
-<p>Dùng WASD, phím mũi tên hoặc chạm vào nơi muốn bơi. Sống sót đủ 5 phút để chiến thắng!</p>
-</div>
-
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script>
-const canvas=document.getElementById("game");
-const ctx=canvas.getContext("2d");
+const container=document.getElementById("scene");
 
-let p,fish,mines,purpleFish,keys,score,world;
-let hitLock,gameOver,raf,lastTime;
-let pointer=null,bubbles=[],jellyfish=[],explosions=[];
-let animationTime=0;
-let timeLeft=300,victory=false,paused=false;
-let fireworks=[],confetti=[],victoryStarted=false;
-let fireworkCooldown=0;
+// 1. TẠO THẾ GIỚI 3D
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x07517e);
+scene.fog=new THREE.Fog(0x07517e,25,75);
 
-const rand=(a,b)=>Math.random()*(b-a)+a;
+const camera=new THREE.PerspectiveCamera(
+ 65,innerWidth/innerHeight,.1,150
+);
+camera.position.set(0,9,23);
+camera.lookAt(0,1,-5);
 
-function addFish(x){
- const styles=["cute","colorful","natural"];
- const colors=["#ff9f43","#ff6fae","#ffe66d","#55d6be","#a78bfa","#55aaff","#ff795e"];
- fish.push({
-  x,y:rand(65,420),r:rand(9,17),speed:rand(.7,1.8),
-  phase:rand(0,7),direction:Math.random()<.5?1:-1,
-  style:styles[Math.floor(rand(0,3))],
-  color:colors[Math.floor(rand(0,colors.length))]
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;
+container.appendChild(renderer.domElement);
+
+// 2. ÁNH SÁNG ĐẠI DƯƠNG
+scene.add(new THREE.HemisphereLight(0x9eeaff,0x17234c,2));
+
+const sunlight=new THREE.DirectionalLight(0x9deaff,2.5);
+sunlight.position.set(-8,18,10);
+sunlight.castShadow=true;
+scene.add(sunlight);
+
+const purpleLight=new THREE.PointLight(0x9c4dff,45,35);
+purpleLight.position.set(0,5,-10);
+scene.add(purpleLight);
+
+const blueLight=new THREE.PointLight(0x00eaff,35,25);
+blueLight.position.set(-8,3,-7);
+scene.add(blueLight);
+
+// 3. ĐÁY ĐẠI DƯƠNG
+const seabed=new THREE.Mesh(
+ new THREE.PlaneGeometry(100,100),
+ new THREE.MeshStandardMaterial({
+  color:0x164b68,roughness:1
+ })
+);
+seabed.rotation.x=-Math.PI/2;
+seabed.position.y=-4;
+seabed.position.z=-10;
+seabed.receiveShadow=true;
+scene.add(seabed);
+
+// 4. TẠO ĐÁ HANG ĐỘNG
+function rock(x,y,z,sx,sy,sz,color=0x354c78){
+ const obj=new THREE.Mesh(
+  new THREE.DodecahedronGeometry(1,1),
+  new THREE.MeshStandardMaterial({
+   color,roughness:1
+  })
+ );
+ obj.position.set(x,y,z);
+ obj.scale.set(sx,sy,sz);
+ obj.rotation.set(Math.random(),Math.random(),Math.random());
+ obj.castShadow=true;
+ obj.receiveShadow=true;
+ scene.add(obj);
+ return obj;
+}
+
+// Hai vách đá hai bên hang
+for(let i=0;i<13;i++){
+ let y=-2.5+i*.75;
+ rock(-9-random(0,2),y,-12,2.5,2.2,3);
+ rock(9+random(0,2),y,-12,2.5,2.2,3);
+}
+
+// Vòm đá phía trên hang
+for(let i=0;i<13;i++){
+ let a=Math.PI+i*Math.PI/12;
+ let x=Math.cos(a)*9;
+ let y=4+Math.sin(a)*5;
+ rock(x,y,-12,2,2,3);
+}
+
+// Các tảng đá ở phía trước
+for(let i=0;i<25;i++){
+ rock(random(-16,16),-3.5,random(-22,4),
+ random(.5,1.8),random(.3,1.2),random(.5,1.8),
+ 0x294b65);
+}
+
+// 5. MIỆNG HANG ĐỘNG
+const entrance=new THREE.Mesh(
+ new THREE.CircleGeometry(7.2,48),
+ new THREE.MeshBasicMaterial({color:0x020b27})
+);
+entrance.position.set(0,1,-10);
+entrance.rotation.y=0;
+scene.add(entrance);
+
+// Ánh sáng bí ẩn trong hang
+const caveGlow=new THREE.PointLight(0x713cff,70,25);
+caveGlow.position.set(0,2,-14);
+scene.add(caveGlow);
+
+// 6. TẠO SAN HÔ
+function coral(x,z,color){
+ const group=new THREE.Group();
+ const mat=new THREE.MeshStandardMaterial({
+  color,roughness:.45,emissive:color,
+  emissiveIntensity:.12
  });
+
+ function branch(px,py,pz,length,radius,angle){
+  const mesh=new THREE.Mesh(
+   new THREE.CylinderGeometry(radius*.65,radius,length,8),
+   mat
+  );
+  mesh.position.set(px,py,pz);
+  mesh.rotation.z=angle;
+  mesh.castShadow=true;
+  group.add(mesh);
+ }
+
+ branch(0,1,0,2,.25,0);
+ branch(-.5,1.6,0,1.5,.18,-.65);
+ branch(.5,1.6,0,1.5,.18,.65);
+ branch(-.9,2.2,0,1,.13,-.8);
+ branch(.9,2.2,0,1,.13,.8);
+ branch(0,2.6,0,1,.13,0);
+
+ group.position.set(x,-4,z);
+ scene.add(group);
+ return group;
 }
 
-function addMine(x){
- mines.push({x,y:rand(70,420),r:17,speed:rand(2,3.5),phase:rand(0,7)});
+const coralColors=[
+ 0xff4eae,0xff8755,0x9c69ff,
+ 0x35e5d2,0xffd84d,0x6b8cff
+];
+
+let corals=[];
+for(let i=0;i<30;i++){
+ const x=random(-17,17);
+ const z=random(-23,3);
+ const c=coral(
+  x,z,coralColors[i%coralColors.length]
+ );
+ c.scale.setScalar(random(.7,1.7));
+ corals.push(c);
 }
 
-function addPurpleFish(x){
- purpleFish.push({x,y:rand(100,380),r:48,speed:rand(.8,1.4),phase:rand(0,7),direction:Math.random()<.5?1:-1});
+// 7. PHA LÊ PHÁT SÁNG
+let crystals=[];
+for(let i=0;i<20;i++){
+ const color=[0x33eaff,0xb66aff,0xff6bd6][i%3];
+ const crystal=new THREE.Mesh(
+  new THREE.OctahedronGeometry(random(.4,.9)),
+  new THREE.MeshStandardMaterial({
+   color,
+   emissive:color,
+   emissiveIntensity:1.8,
+   metalness:.3,
+   roughness:.2
+  })
+ );
+ crystal.position.set(
+  random(-12,12),random(-2,3),random(-20,-5)
+ );
+ crystal.rotation.set(random(0,3),random(0,3),random(0,3));
+ scene.add(crystal);
+ crystals.push(crystal);
 }
 
-function createBubbles(){
- bubbles=[];
- for(let i=0;i<45;i++)bubbles.push({x:rand(0,900),y:rand(0,520),r:rand(2,7),speed:rand(.4,1.5)});
+// 8. RONG BIỂN
+let seaweeds=[];
+for(let i=0;i<28;i++){
+ const height=random(1.5,4);
+ const weed=new THREE.Mesh(
+  new THREE.CylinderGeometry(.04,.13,height,7),
+  new THREE.MeshStandardMaterial({
+   color:i%2?0x20b77c:0x36d69a
+  })
+ );
+ weed.position.set(random(-18,18),-4+height/2,random(-23,5));
+ weed.userData.phase=random(0,7);
+ scene.add(weed);
+ seaweeds.push(weed);
 }
 
-function createJellyfish(){
- jellyfish=[];
- const colors=["#ff8de2","#8ceaff","#d6a0ff","#fff08c"];
- for(let i=0;i<7;i++)jellyfish.push({
-  x:rand(50,850),y:rand(50,450),r:rand(13,23),
-  speed:rand(.3,.8),phase:rand(0,7),color:colors[i%4]
+// 9. BONG BÓNG NƯỚC
+let bubbles=[];
+for(let i=0;i<90;i++){
+ const bubble=new THREE.Mesh(
+  new THREE.SphereGeometry(random(.04,.13),8,8),
+  new THREE.MeshBasicMaterial({
+   color:0xb8f5ff,
+   transparent:true,opacity:.55
+  })
+ );
+ bubble.position.set(
+  random(-20,20),random(-4,12),random(-25,8)
+ );
+ bubble.userData.speed=random(.5,2);
+ scene.add(bubble);
+ bubbles.push(bubble);
+}
+
+// 10. CÁC HÀM NGẪU NHIÊN
+function random(min,max){
+ return Math.random()*(max-min)+min;
+}
+
+// 11. HIỆU ỨNG CHUYỂN ĐỘNG
+const clock=new THREE.Clock();
+
+function animate(){
+ requestAnimationFrame(animate);
+ const t=clock.getElapsedTime();
+
+ // Pha lê xoay
+ crystals.forEach((c,i)=>{
+  c.rotation.y+=.01;
+  c.position.y+=Math.sin(t+i)*.0015;
  });
+
+ // Rong biển đung đưa
+ seaweeds.forEach((w,i)=>{
+  w.rotation.z=Math.sin(t*1.5+w.userData.phase)*.13;
+ });
+
+ // San hô chuyển động nhẹ
+ corals.forEach((c,i)=>{
+  c.rotation.z=Math.sin(t*.6+i)*.025;
+ });
+
+ // Bong bóng nổi lên
+ bubbles.forEach(b=>{
+  b.position.y+=b.userData.speed*.025;
+  if(b.position.y>12){
+   b.position.y=-4;
+   b.position.x=random(-20,20);
+   b.position.z=random(-25,8);
+  }
+ });
+
+ // Ánh sáng nhấp nháy
+ caveGlow.intensity=65+Math.sin(t*2)*12;
+ purpleLight.intensity=40+Math.sin(t*1.5)*8;
+
+ renderer.render(scene,camera);
 }
+
+// 12. THAY ĐỔI KÍCH THƯỚC MÀN HÌNH
+function resize(){
+ camera.aspect=innerWidth/innerHeight;
+ camera.updateProjectionMatrix();
+ renderer.setSize(innerWidth,innerHeight);
+}
+window.addEventListener("resize",resize);
+
+animate();
 </script>
 </body>
 </html>
