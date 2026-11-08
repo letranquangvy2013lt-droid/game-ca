@@ -178,177 +178,105 @@ function explode(x,y){
 }
 
 function drawFish(f){
+ const t=performance.now()/180;
+ const tail=Math.sin(t)*0.28;
+ const fin=Math.sin(t+1)*0.12;
+
  ctx.save();
  ctx.translate(f.x,f.y);
  if(f.dir<0)ctx.scale(-1,1);
- ctx.fillStyle=f.color;
+
+ const r=f.r;
+
+ // Đuôi cá chuyển động
+ ctx.save();
+ ctx.rotate(tail);
+ ctx.fillStyle=f.big?"#6730a8":"#247f9c";
  ctx.beginPath();
- ctx.ellipse(0,0,f.r*1.3,f.r*.8,0,0,Math.PI*2);
+ ctx.moveTo(-r*.85,0);
+ ctx.lineTo(-r*1.8,-r*.85);
+ ctx.lineTo(-r*1.55,0);
+ ctx.lineTo(-r*1.8,r*.85);
+ ctx.closePath();
  ctx.fill();
+ ctx.restore();
+
+ // Thân cá có chuyển màu
+ const body=ctx.createLinearGradient(0,-r,0,r);
+ body.addColorStop(0,f.big?"#d49aff":"#b8edf0");
+ body.addColorStop(.45,f.color);
+ body.addColorStop(1,f.big?"#57208d":"#24718d");
+
+ ctx.fillStyle=body;
  ctx.beginPath();
- ctx.moveTo(-f.r,0);
- ctx.lineTo(-f.r*1.8,-f.r*.7);
- ctx.lineTo(-f.r*1.8,f.r*.7);
- ctx.closePath();ctx.fill();
- ctx.fillStyle="#162b42";
- ctx.beginPath();ctx.arc(f.r*.7,-f.r*.2,Math.max(2,f.r*.11),0,Math.PI*2);ctx.fill();
- if(f.big){
-  ctx.fillStyle="#ffe9ff";ctx.font="bold 15px Arial";
-  ctx.fillText("KHỔNG LỒ",-f.r,-f.r-9);
- }
+ ctx.ellipse(0,0,r*1.3,r*.78,0,0,Math.PI*2);
+ ctx.fill();
+
+ // Vây lưng chuyển động
+ ctx.save();
+ ctx.translate(-r*.05,-r*.55);
+ ctx.rotate(fin);
+ ctx.fillStyle=f.big?"#813bc0":"#397e98";
+ ctx.beginPath();
+ ctx.moveTo(-r*.35,0);
+ ctx.lineTo(r*.05,-r*.75);
+ ctx.lineTo(r*.5,0);
+ ctx.closePath();
+ ctx.fill();
  ctx.restore();
-}
 
-function drawBomb(b){
- const pulse=1+Math.sin(b.phase)*.08;
- ctx.save();ctx.translate(b.x,b.y);ctx.scale(pulse,pulse);
- ctx.fillStyle="#263b4b";
- ctx.beginPath();ctx.arc(0,0,b.r,0,Math.PI*2);ctx.fill();
- ctx.strokeStyle="#d3e6f3";ctx.lineWidth=3;
- ctx.beginPath();ctx.arc(-5,-5,5,0,Math.PI*2);ctx.stroke();
- ctx.strokeStyle="#ffdc45";ctx.lineWidth=5;
- ctx.beginPath();ctx.moveTo(5,-b.r+3);ctx.lineTo(12,-b.r-9);ctx.stroke();
- ctx.fillStyle="#ff553c";
- ctx.beginPath();ctx.arc(13,-b.r-10,4,0,Math.PI*2);ctx.fill();
+ // Vây dưới
+ ctx.save();
+ ctx.translate(-r*.1,r*.55);
+ ctx.rotate(-fin);
+ ctx.fillStyle=f.big?"#7835ae":"#357a94";
+ ctx.beginPath();
+ ctx.moveTo(-r*.25,0);
+ ctx.lineTo(r*.1,r*.55);
+ ctx.lineTo(r*.4,0);
+ ctx.closePath();
+ ctx.fill();
  ctx.restore();
-}
 
-function drawPlayer(){
- drawFish({...player,color:"#ff9e32",dir:1});
-}
+ // Vây bên
+ ctx.fillStyle=f.big?"#a65bd2":"#4793a5";
+ ctx.beginPath();
+ ctx.moveTo(-r*.1,r*.2);
+ ctx.lineTo(r*.65,r*.7);
+ ctx.lineTo(r*.35,r*.05);
+ ctx.closePath();
+ ctx.fill();
 
-function update(dt){
- timeLeft-=dt;
- if(timeLeft<=0){
-  timeLeft=0;hud();finish(true);return;
+ // Mang cá
+ ctx.strokeStyle="rgba(30,55,70,.6)";
+ ctx.lineWidth=Math.max(1,r*.045);
+ for(let i=0;i<3;i++){
+  ctx.beginPath();
+  ctx.moveTo(r*.35+i*r*.13,-r*.28);
+  ctx.quadraticCurveTo(r*.2+i*r*.13,0,r*.35+i*r*.13,r*.3);
+  ctx.stroke();
  }
 
- let dx=0,dy=0;
- if(keys.ArrowLeft||keys.a)dx--;
- if(keys.ArrowRight||keys.d)dx++;
- if(keys.ArrowUp||keys.w)dy--;
- if(keys.ArrowDown||keys.s)dy++;
-
- if(pointer.active){
-  const px=pointer.x-player.x,py=pointer.y-player.y;
-  const d=Math.hypot(px,py);
-  if(d>10){dx=px/d;dy=py/d;}
-  else{dx=0;dy=0;}
- }
- const len=Math.hypot(dx,dy);
- if(len>0){
-  player.x+=dx/len*player.speed*dt;
-  player.y+=dy/len*player.speed*dt;
- }
- player.x=Math.max(player.r,Math.min(900-player.r,player.x));
- player.y=Math.max(player.r,Math.min(520-player.r,player.y));
-
- for(let i=fish.length-1;i>=0;i--){
-  const f=fish[i];
-  f.x+=f.speed*f.dir*dt;
-  if(f.x<f.r*2||f.x>900-f.r*2)f.dir*=-1;
-  if(Math.hypot(player.x-f.x,player.y-f.y)<player.r+f.r*.7){
-   if(player.r>f.r*.9){
-    score+=f.big?50:10;
-    player.r=Math.min(75,player.r+(f.big?2:1));
-    fish.splice(i,1);
-    fish.push(makeFish());
-    say("⭐ Bạn đã ăn được cá! + điểm");
-   }else if(f.big){
-    loseLife();
-    fish.splice(i,1);fish.push(makeFish(true));
+ // Vảy cá
+ if(r>18){
+  ctx.fillStyle="rgba(255,255,255,.22)";
+  for(let i=0;i<4;i++){
+   for(let j=0;j<2;j++){
+    ctx.beginPath();
+    ctx.arc(-r*.45+i*r*.23,-r*.12+j*r*.23,r*.035,0,Math.PI*2);
+    ctx.fill();
    }
   }
  }
- for(let i=bombs.length-1;i>=0;i--){
-  const b=bombs[i];b.phase+=dt*5;
-  if(Math.hypot(player.x-b.x,player.y-b.y)<player.r+b.r){
-   explode(b.x,b.y);
-   bombs.splice(i,1);
-   bombs.push(makeBomb());
-   loseLife();
-  }
- }
- for(let i=particles.length-1;i>=0;i--){
-  const p=particles[i];
-  p.x+=p.vx*dt;p.y+=p.vy*dt;
-  p.vx*=.97;p.vy*=.97;
-  p.life-=dt;
-  if(p.life<=0)particles.splice(i,1);
- }
- if(messageTimer>0){messageTimer-=dt;if(messageTimer<=0)say("Ăn cá nhỏ, tránh cá lớn và bom!");}
- hud();
-}
 
-function draw(){
- ctx.clearRect(0,0,900,520);
- const bg=ctx.createLinearGradient(0,0,0,520);
- bg.addColorStop(0,"#65d7e8");bg.addColorStop(1,"#08759f");
- ctx.fillStyle=bg;ctx.fillRect(0,0,900,520);
- for(let i=0;i<45;i++){
-  const x=(i*137+30)%900,y=(i*83+20)%520;
-  ctx.fillStyle="rgba(255,255,255,.25)";
-  ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill();
- }
- fish.forEach(drawFish);
- bombs.forEach(drawBomb);
- drawPlayer();
- particles.forEach(p=>{
-  ctx.globalAlpha=Math.max(0,p.life/(p.max||1));
-  ctx.fillStyle=p.color;
-  ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();
-  ctx.globalAlpha=1;
- });
+ // Mắt
+ ctx.fillStyle="white";
+ ctx.beginPath();
+ ctx.arc(r*.78,-r*.19,Math.max(2,r*.12),0,Math.PI*2);
+ ctx.fill();
+ ctx.fillStyle="#142b3c";
+ ctx.beginPath();
+ ctx.arc(r*.81,-r*.19,Math.max(1,r*.065),0,Math.PI*2);
+ ctx.fill();
+ ctx.restore();
 }
-
-function loop(now){
- if(!running||paused)return;
- const dt=Math.min((now-last)/1000,.04);
- last=now;
- update(dt);
- if(running){draw();raf=requestAnimationFrame(loop);}
-}
-
-$("startBtn").addEventListener("click",reset);
-$("restartBtn").addEventListener("click",reset);
-$("playAgain").addEventListener("click",reset);
-$("helpBtn").addEventListener("click",()=>{
- alert("HƯỚNG DẪN CHƠI\n\nWASD hoặc phím mũi tên để di chuyển.\nĂn cá nhỏ để tăng điểm và kích thước.\nTránh cá tím khổng lồ nếu bạn còn nhỏ.\nTránh bom vì bom sẽ phát nổ và làm mất 1 mạng.\nBạn có 4 mạng và 5 phút để chiến thắng!");
-});
-$("pauseBtn").addEventListener("click",()=>{
- if(!running)return;
- paused=!paused;
- $("pauseBtn").textContent=paused?"▶ TIẾP TỤC":"⏸ TẠM DỪNG";
- if(!paused){last=performance.now();raf=requestAnimationFrame(loop);}
-});
-function home(){
- running=false;cancelAnimationFrame(raf);
- result.style.display="none";screen("lobby");
-}
-$("homeBtn").addEventListener("click",home);
-$("resultHome").addEventListener("click",home);
-
-window.addEventListener("keydown",e=>{
- const k=e.key.length===1?e.key.toLowerCase():e.key;
- if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key))e.preventDefault();
- keys[k]=true;
-});
-window.addEventListener("keyup",e=>{
- const k=e.key.length===1?e.key.toLowerCase():e.key;
- keys[k]=false;
-});
-function setPointer(e){
- const rect=canvas.getBoundingClientRect();
- pointer.x=(e.clientX-rect.left)*900/rect.width;
- pointer.y=(e.clientY-rect.top)*520/rect.height;
- pointer.active=true;
-}
-canvas.addEventListener("pointerdown",setPointer);
-canvas.addEventListener("pointermove",e=>{
- if(e.buttons||e.pointerType==="touch")setPointer(e);
-});
-screen("lobby");
-})();
-</script>
-</body>
-</html>
