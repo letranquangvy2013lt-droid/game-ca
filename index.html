@@ -140,7 +140,7 @@ function finish(won){
  result.style.display="flex";
  if(won){
   for(let i=0;i<160;i++){
-   particles.push({x:rand(0,900),y:rand(-500,0),vx:rand(-80,80),vy:rand(50,180),life:5,color:["#ffe66d","#ff6b9b","#73f5e6","#ffffff"][i%4],r:rand(3,7]});
+   particles.push({x:rand(0,900),y:rand(-500,0),vx:rand(-80,80),vy:rand(50,180),life:5,color:["#ffe66d","#ff6b9b","#73f5e6","#ffffff"][i%4],r:rand(3,7)});
   }
   // Confetti is displayed on the victory screen.
   drawConfetti();
